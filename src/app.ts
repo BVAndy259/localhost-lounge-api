@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import authRouter from './routes/auth.routes'
 import userRouter from './routes/user.routes'
+import waiterRouter from './routes/waiter.routes'
 
 const app: Application = express();
 
@@ -18,5 +19,6 @@ app.get('/api/health', (req: Request, res: Response) => {
 
 app.use('/api/auth', authRouter)
 app.use('/api/users', userRouter)
+app.use('/api/waiters', waiterRouter)
 
 export default app;

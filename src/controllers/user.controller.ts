@@ -55,7 +55,7 @@ export const UserController = {
       const { active } = req.body;
       
       if (typeof active !== 'boolean') {
-        res.status(400).json({ error: 'El campo «activo» debe ser un valor booleano (verdadero o falso)' });
+        res.status(400).json({ error: 'El campo «activo» debe ser un valor booleano' });
         return;
       }
 
