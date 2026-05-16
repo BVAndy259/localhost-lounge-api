@@ -18,8 +18,18 @@ model User {
   password_hash String @db.VarChar(255)
   role          String @default("RECEPCIONISTA") @db.VarChar(50)
   active        Boolean @default(true)
+  reservations  Reservation[]
 
   @@map("users")
+}
+
+model Waiter {
+  id     Int @id @default(autoincrement())
+  name   String @db.VarChar(100)
+  active Boolean @default(true)
+  tables Table[]
+
+  @@map("waiters")
 }
 
 model Client {
@@ -38,12 +48,15 @@ model Client {
 
 model Table {
   id                Int      @id @default(autoincrement())
+  waiter_id         Int?
   table_number      Int      @unique
   capacity          Int
   type              String   @db.VarChar(20)
   reservation_price Decimal  @default(0.00) @db.Decimal(10, 2)
   description       String   @db.Text()
   active            Boolean  @default(true)
+  status            String   @default("LIBRE")
+  waiter            Waiter?  @relation(fields: [waiter_id], references: [id], onDelete: SetNull)
   reservations      Reservation[]
 
   @@map("tables")
@@ -53,6 +66,7 @@ model Reservation {
   id               Int      @id @default(autoincrement())
   client_id        Int
   table_id         Int
+  receptionist_id  Int?
   reservation_date DateTime @db.Date
   reservation_time DateTime @db.Time
   number_people    Int
@@ -61,6 +75,7 @@ model Reservation {
   created_on       DateTime @default(now())
   client           Client   @relation(fields: [client_id], references: [id], onDelete: Cascade)
   table            Table    @relation(fields: [table_id], references: [id])
+  receptionist     User?    @relation(fields: [receptionist_id], references: [id], onDelete: SetNull)
 
   @@map("reservations")
 }
