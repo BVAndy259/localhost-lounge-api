@@ -27,7 +27,7 @@ export const UserService = {
   },
 
   async toggleUserStatus(id: number, active: boolean) {
-    const userExists = await prisma.user.findMany({ where: { id } });
+    const userExists = await prisma.user.findUnique({ where: { id } });
 
     if (!userExists) throw new Error("No se ha encontrado al usuario");
 
