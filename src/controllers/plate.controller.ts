@@ -10,6 +10,7 @@ export const PlateController = {
         res
           .status(400)
           .json({ error: "Nombre, precio y categoria son requeridos" });
+        return;
       }
 
       const newPlate = await PlateService.createPlate({
@@ -66,9 +67,10 @@ export const PlateController = {
         data: updatePlate,
       });
     } catch (error: any) {
-      console.error(`[PLATE ERROR] Update: ${error.message}]`);
+      console.error(`[PLATE ERROR] Update: ${error.message}`);
       if (error.message === "Plato no encontrado") {
         res.status(404).json({ error: error.message });
+        return;
       }
       res.status(400).json({ error: error.message });
     }
@@ -106,6 +108,7 @@ export const PlateController = {
       console.error(`[PLATE ERROR] ToggleStatus: ${error.message}`);
       if (error.message === "Plato no encontrado") {
         res.status(404).json({ error: error.message });
+        return;
       }
       res.status(400).json({ error: error.message });
     }
