@@ -1,40 +1,40 @@
 import prisma from "../config/prisma";
 
 export const UserService = {
-    async getAllUsers() {
-        return await prisma.user.findMany({
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                active: true
-            },
-            orderBy: { id: 'asc'}
-        })
-    },
+  async getAllUsers() {
+    return await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+      },
+      orderBy: { id: "asc" },
+    });
+  },
 
-    async updateUser(id: number, data: { name?: string, role?: string }) {
-        const userExists = await prisma.user.findUnique({ where: { id } })
+  async updateUser(id: number, data: { name?: string; role?: string }) {
+    const userExists = await prisma.user.findUnique({ where: { id } });
 
-        if (!userExists) throw new Error ('No se ha encontrado al usuario');
+    if (!userExists) throw new Error("No se ha encontrado al usuario");
 
-        return await prisma.user.update({
-            where: { id },
-            data,
-            select: { id: true, name: true, email: true, role: true, active: true }
-        })
-    },
+    return await prisma.user.update({
+      where: { id },
+      data,
+      select: { id: true, name: true, email: true, role: true, active: true },
+    });
+  },
 
-    async toggleUserStatus(id: number, active: boolean) {
-        const userExists = await prisma.user.findMany({ where: { id } })
+  async toggleUserStatus(id: number, active: boolean) {
+    const userExists = await prisma.user.findMany({ where: { id } });
 
-        if (!userExists) throw new Error('No se ha encontrado al usuario');
-        
-        return await prisma.user.update({
-            where: { id },
-            data: { active },
-            select: { id: true, name: true, email: true, role: true, active: true}
-        })
-    }
-}
+    if (!userExists) throw new Error("No se ha encontrado al usuario");
+
+    return await prisma.user.update({
+      where: { id },
+      data: { active },
+      select: { id: true, name: true, email: true, role: true, active: true },
+    });
+  },
+};

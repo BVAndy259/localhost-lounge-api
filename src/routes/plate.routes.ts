@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { WaiterController } from "../controllers/waiter.controller";
+import { PlateController } from "../controllers/plate.controller";
 import { AuthMiddleware } from "../middlewares/auth.middleware";
 import { RoleMiddleware } from "../middlewares/role.middleware";
 import { Roles } from "../constants/roles";
@@ -8,12 +8,12 @@ const router = Router();
 
 router.use(AuthMiddleware.verifyToken, RoleMiddleware.checkRole([Roles.ADMIN]));
 
-router.post("/", WaiterController.create);
+router.post("/", PlateController.create);
 
-router.get("/", WaiterController.getAll);
+router.get("/", PlateController.getAll);
 
-router.put("/:id", WaiterController.update);
+router.put("/:id", PlateController.update);
 
-router.patch("/:id/status", WaiterController.toggleStatus);
+router.patch("/:id/status", PlateController.toggleStatus);
 
 export default router;

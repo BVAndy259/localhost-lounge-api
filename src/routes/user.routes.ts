@@ -4,16 +4,14 @@ import { AuthMiddleware } from "../middlewares/auth.middleware";
 import { RoleMiddleware } from "../middlewares/role.middleware";
 import { Roles } from "../constants/roles";
 
-const router = Router()
+const router = Router();
 
-router.use(
-    AuthMiddleware.verifyToken, RoleMiddleware.checkRole([Roles.ADMIN])
-)
+router.use(AuthMiddleware.verifyToken, RoleMiddleware.checkRole([Roles.ADMIN]));
 
-router.get('/', UserController.getAll)
+router.get("/", UserController.getAll);
 
-router.put('/:id', UserController.update)
+router.put("/:id", UserController.update);
 
-router.patch('/:id/status', UserController.toggleStatus)
+router.patch("/:id/status", UserController.toggleStatus);
 
-export default router
+export default router;
