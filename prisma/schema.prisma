@@ -12,20 +12,20 @@ datasource db {
 }
 
 model User {
-  id            Int    @id @default(autoincrement())
-  name          String @db.VarChar(100)
-  email         String @unique @db.VarChar(100)
-  password_hash String @db.VarChar(255)
-  role          String @default("RECEPCIONISTA") @db.VarChar(50)
-  active        Boolean @default(true)
+  id            Int           @id @default(autoincrement())
+  name          String        @db.VarChar(100)
+  email         String        @unique @db.VarChar(100)
+  password_hash String        @db.VarChar(255)
+  role          String        @default("RECEPCIONISTA") @db.VarChar(50)
+  active        Boolean       @default(true)
   reservations  Reservation[]
 
   @@map("users")
 }
 
 model Waiter {
-  id     Int @id @default(autoincrement())
-  name   String @db.VarChar(100)
+  id     Int     @id @default(autoincrement())
+  name   String  @db.VarChar(100)
   active Boolean @default(true)
   tables Table[]
 
@@ -33,30 +33,30 @@ model Waiter {
 }
 
 model Client {
-  id                 Int    @id @default(autoincrement())
-  name               String @db.VarChar(100)
-  last_name          String @db.VarChar(100)
-  email              String @unique @db.VarChar(100)
-  phone_number       String @unique @db.VarChar(20)
-  total_reservations Int    @default(0)
-  category           String @default("NUEVO") @db.VarChar(20)
+  id                 Int            @id @default(autoincrement())
+  name               String         @db.VarChar(100)
+  last_name          String         @db.VarChar(100)
+  email              String         @unique @db.VarChar(100)
+  phone_number       String         @unique @db.VarChar(20)
+  total_reservations Int            @default(0)
+  category           String         @default("NUEVO") @db.VarChar(20)
   reservations       Reservation[]
   chat_sessions      Chat_Session[]
 
   @@map("clients")
-}   
+}
 
 model Table {
-  id                Int      @id @default(autoincrement())
+  id                Int           @id @default(autoincrement())
   waiter_id         Int?
-  table_number      Int      @unique
+  table_number      Int           @unique
   capacity          Int
-  type              String   @db.VarChar(20)
-  reservation_price Decimal  @default(0.00) @db.Decimal(10, 2)
-  description       String   @db.Text()
-  active            Boolean  @default(true)
-  status            String   @default("LIBRE")
-  waiter            Waiter?  @relation(fields: [waiter_id], references: [id], onDelete: SetNull)
+  type              String        @db.VarChar(20)
+  reservation_price Decimal       @default(0.00) @db.Decimal(10, 2)
+  description       String        @db.Text()
+  active            Boolean       @default(true)
+  status            String        @default("LIBRE")
+  waiter            Waiter?       @relation(fields: [waiter_id], references: [id], onDelete: SetNull)
   reservations      Reservation[]
 
   @@map("tables")
@@ -81,34 +81,35 @@ model Reservation {
 }
 
 model Plate {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(100)
-  description String?  @db.Text
-  price       Decimal  @db.Decimal(10, 2)
-  category    String   @db.VarChar(50)
-  available   Boolean  @default(true)
+  id          Int     @id @default(autoincrement())
+  name        String  @db.VarChar(100)
+  description String? @db.Text
+  price       Decimal @db.Decimal(10, 2)
+  category    String  @db.VarChar(50)
+  available   Boolean @default(true)
+  image_url   String? @db.Text
 
   @@map("plates")
 }
 
 model Chat_Session {
-  id            Int      @id @default(autoincrement())
-  session_token String   @unique @db.VarChar(255)
+  id            Int            @id @default(autoincrement())
+  session_token String         @unique @db.VarChar(255)
   client_id     Int?
-  created_on    DateTime @default(now())
-  client        Client?      @relation(fields: [client_id], references: [id], onDelete: SetNull)
+  created_on    DateTime       @default(now())
+  client        Client?        @relation(fields: [client_id], references: [id], onDelete: SetNull)
   messages      Chat_Message[]
 
   @@map("chat_sessions")
 }
 
 model Chat_Message {
-  id                  Int      @id @default(autoincrement())
-  session_id          Int
-  role                String   @db.VarChar(20)
-  content             String   @db.Text
-  created_on          DateTime @default(now())
-  sesion Chat_Session @relation(fields: [session_id], references: [id], onDelete: Cascade)
+  id         Int          @id @default(autoincrement())
+  session_id Int
+  role       String       @db.VarChar(20)
+  content    String       @db.Text
+  created_on DateTime     @default(now())
+  sesion     Chat_Session @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@map("chat_messages")
 }

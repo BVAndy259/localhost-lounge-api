@@ -1,5 +1,5 @@
-import app from './app';
-import { env } from './config/env'
+import app from "./app";
+import { env } from "./config/env";
 
 app.listen(env.PORT, () => {
   console.log(`[SERVER] LocalHost Lounge API está disponible`);
