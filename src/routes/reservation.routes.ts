@@ -1,0 +1,20 @@
+import { Router } from "express";
+import { ReservationController } from "../controllers/reservation.controller";
+import { AuthMiddleware } from "../middlewares/auth.middleware";
+import { RoleMiddleware } from "../middlewares/role.middleware";
+import { Roles } from "../constants/roles";
+
+const router = Router();
+
+router.post("/public", ReservationController.create);
+
+const staffOnly = [
+  AuthMiddleware.verifyToken,
+  RoleMiddleware.checkRole([Roles.ADMIN, Roles.RECEPCIONISTA]),
+];
+
+router.post("/", staffOnly, ReservationController.create);
+router.get("/", staffOnly, ReservationController.getAll);
+router.patch("/:id/status", staffOnly, ReservationController.changeStatus);
+
+export default router;
