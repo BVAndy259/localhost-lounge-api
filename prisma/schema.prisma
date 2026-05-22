@@ -73,6 +73,7 @@ model Reservation {
   status           String   @default("PENDIENTE") @db.VarChar(20)
   notes            String   @db.Text
   created_on       DateTime @default(now())
+  reminder_sent    Boolean  @default(false)
   client           Client   @relation(fields: [client_id], references: [id], onDelete: Cascade)
   table            Table    @relation(fields: [table_id], references: [id])
   receptionist     User?    @relation(fields: [receptionist_id], references: [id], onDelete: SetNull)
