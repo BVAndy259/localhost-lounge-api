@@ -1,6 +1,7 @@
 import { Client, LocalAuth } from "whatsapp-web.js";
 import qrcode from "qrcode-terminal";
 import prisma from "../config/prisma";
+import { AIService } from "./ia.service";
 
 class WhatsAppBot {
   private client: Client;
@@ -17,7 +18,7 @@ class WhatsAppBot {
   public init() {
     this.client.on("qr", (qr) => qrcode.generate(qr, { small: true }));
     this.client.on("ready", () =>
-      console.log("¡LocalHost Lounge Bot conectado!"),
+      console.log("LocalHost Lounge Bot activo y operando"),
     );
 
     this.client.on("message", async (msg) => {
@@ -28,53 +29,78 @@ class WhatsAppBot {
         const chat = await msg.getChat();
         const recentMessages = await chat.fetchMessages({ limit: 10 });
         const lastBotMessage = recentMessages.reverse().find((m) => m.fromMe);
+        const refMatch = lastBotMessage
+          ? lastBotMessage.body.match(/\(Ref:\s*(\d+)\)/)
+          : null;
 
-        if (!lastBotMessage) return;
-
-        const refMatch = lastBotMessage.body.match(/\(Ref:\s*(\d+)\)/);
-        if (!refMatch) return;
+        if (!lastBotMessage || !refMatch) return;
 
         const reservationId = parseInt(refMatch[1], 10);
-
         const activeReservation = await prisma.reservation.findUnique({
           where: { id: reservationId },
         });
 
-        if (!activeReservation || activeReservation.status !== "PENDIENTE")
+        if (
+          !activeReservation ||
+          ["FINALIZADA", "RECHAZADA"].includes(activeReservation.status)
+        )
           return;
 
-        const userText = msg.body.trim().toUpperCase();
+        if (activeReservation.support_required) {
+          console.log(
+            `[BOT] Silenciado: Reserva ${reservationId} en manos de un asesor.`,
+          );
+          return;
+        }
 
-        if (userText === "SÍ" || userText === "SI") {
+        const clientText = msg.body.trim();
+
+        await prisma.message.create({
+          data: {
+            reservation_id: activeReservation.id,
+            sender: "CLIENTE",
+            content: clientText,
+          },
+        });
+
+        const aiAnalysis =
+          await AIService.analyzeReservationResponse(clientText);
+
+        const botReply = aiAnalysis.reply;
+        if (botReply) {
+          await prisma.message.create({
+            data: {
+              reservation_id: activeReservation.id,
+              sender: "BOT",
+              content: botReply,
+            },
+          });
+          await msg.reply(botReply);
+        }
+
+        if (aiAnalysis.intent === "CONFIRMAR") {
           await prisma.reservation.update({
             where: { id: activeReservation.id },
             data: { status: "CONFIRMADA" },
           });
-          await msg.reply(
-            "¡Excelente! Tu reserva ha sido *CONFIRMADA* en el sistema. Te esperamos.",
-          );
-
-          console.log(
-            `[BOT] Reserva ID: ${activeReservation.id} -> CONFIRMADA`,
-          );
-        } else if (userText === "NO") {
+          console.log(`[BOT] Reserva ${reservationId} -> CONFIRMADA`);
+        } else if (aiAnalysis.intent === "CANCELAR") {
           await prisma.reservation.update({
             where: { id: activeReservation.id },
             data: { status: "CANCELADA" },
           });
-          await msg.reply("Entendido. Tu reserva ha sido *CANCELADA*.");
-
-          console.log(`[BOT] Reserva ID: ${activeReservation.id} -> CANCELADA`);
-        } else {
-          await msg.reply(
-            "Por favor, responde únicamente *SÍ* o *NO* para procesar tu confirmación.",
+          console.log(`[BOT] Reserva ${reservationId} -> CANCELADA`);
+        } else if (aiAnalysis.intent === "HUMAN_INTERVENTION") {
+          await prisma.reservation.update({
+            where: { id: activeReservation.id },
+            data: { support_required: true },
+          });
+          console.log(
+            `[ALERT] Reserva ${reservationId} requiere atención humana.`,
           );
         }
       } catch (error) {
-        console.error(
-          "[BOT ERROR] Fallo al procesar el mensaje entrante:",
-          error,
-        );
+        console.error("[BOT ERROR] Fallo crítico en el flujo:", error);
       }
     });
 

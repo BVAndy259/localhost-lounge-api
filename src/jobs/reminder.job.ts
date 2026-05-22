@@ -48,6 +48,6 @@ export const ReminderJob = {
       }
     });
 
-    console.log("Cron Job de recordatorios inicializado (Modo Producción).");
+    console.log("Cron Job de recordatorios inicializado");
   },
 };
