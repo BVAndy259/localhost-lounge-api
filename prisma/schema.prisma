@@ -63,22 +63,21 @@ model Table {
 }
 
 model Reservation {
-  id               Int       @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
   client_id        Int
   table_id         Int
   receptionist_id  Int?
-  reservation_date DateTime  @db.Date
-  reservation_time DateTime  @db.Time
+  reservation_date DateTime @db.Date
+  reservation_time DateTime @db.Time
   number_people    Int
-  status           String    @default("PENDIENTE") @db.VarChar(20)
-  notes            String    @db.Text
-  created_on       DateTime  @default(now())
-  reminder_sent    Boolean   @default(false)
-  support_required Boolean   @default(false)
-  client           Client    @relation(fields: [client_id], references: [id], onDelete: Cascade)
-  table            Table     @relation(fields: [table_id], references: [id])
-  receptionist     User?     @relation(fields: [receptionist_id], references: [id], onDelete: SetNull)
-  messages         Message[]
+  status           String   @default("PENDIENTE") @db.VarChar(20)
+  notes            String   @db.Text
+  created_on       DateTime @default(now())
+  support_required Boolean  @default(false)
+
+  client       Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  table        Table  @relation(fields: [table_id], references: [id])
+  receptionist User?  @relation(fields: [receptionist_id], references: [id], onDelete: SetNull)
 
   @@map("reservations")
 }
@@ -93,17 +92,6 @@ model Plate {
   image_url   String? @db.Text
 
   @@map("plates")
-}
-
-model Message {
-  id             Int      @id @default(autoincrement())
-  reservation_id Int
-  sender         String   @db.VarChar(20)
-  content        String   @db.Text
-  created_at     DateTime @default(now())
-  reservation Reservation @relation(fields: [reservation_id], references: [id], onDelete: Cascade)
-
-  @@map("messages")
 }
 
 model Chat_Session {
