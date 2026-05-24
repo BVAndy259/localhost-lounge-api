@@ -6,6 +6,7 @@ import waiterRouter from "./routes/waiter.routes";
 import plateRouter from "./routes/plate.routes";
 import tableRouter from "./routes/table.routes";
 import reservationRouter from "./routes/reservation.routes";
+import chatRouter from "./routes/chat.routes";
 
 const app: Application = express();
 
@@ -26,5 +27,6 @@ app.use("/api/waiters", waiterRouter);
 app.use("/api/plates", plateRouter);
 app.use("/api/tables", tableRouter);
 app.use("/api/reservations", reservationRouter);
+app.use("/api/chat", chatRouter);
 
 export default app;
