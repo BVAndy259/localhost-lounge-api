@@ -36,6 +36,23 @@ export const TableService = {
     });
   },
 
+  async getPublicTables() {
+    return await prisma.table.findMany({
+      where: { active: true },
+      select: {
+        id: true,
+        table_number: true,
+        capacity: true,
+        type: true,
+        reservation_price: true,
+        description: true,
+      },
+      orderBy: {
+        table_number: "asc",
+      },
+    });
+  },
+
   async updateTable(
     id: number,
     data: {

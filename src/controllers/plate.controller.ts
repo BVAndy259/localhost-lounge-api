@@ -44,6 +44,20 @@ export const PlateController = {
     }
   },
 
+  async getPublic(req: Request, res: Response): Promise<void> {
+    try {
+      const plates = await PlateService.getPublicPlates();
+
+      res.status(200).json({
+        message: "Se ha recuperado correctamente los platos disponibles",
+        data: plates,
+      });
+    } catch (error: any) {
+      console.error(`[PLATE ERROR] GetPublic: ${error.message}`);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  },
+
   async update(req: Request, res: Response): Promise<void> {
     try {
       const plateId = parseInt(req.params.id as string, 10);

@@ -26,6 +26,13 @@ export const PlateService = {
     });
   },
 
+  async getPublicPlates() {
+    return await prisma.plate.findMany({
+      where: { available: true },
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+    });
+  },
+
   async updatePlate(
     id: number,
     data: {

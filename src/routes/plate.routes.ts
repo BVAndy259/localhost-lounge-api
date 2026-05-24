@@ -6,6 +6,8 @@ import { Roles } from "../constants/roles";
 
 const router = Router();
 
+router.get("/public", PlateController.getPublic);
+
 router.use(AuthMiddleware.verifyToken, RoleMiddleware.checkRole([Roles.ADMIN]));
 
 router.post("/", PlateController.create);

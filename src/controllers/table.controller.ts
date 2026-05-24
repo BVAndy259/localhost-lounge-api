@@ -39,14 +39,25 @@ export const TableController = {
   async getAll(req: Request, res: Response): Promise<void> {
     try {
       const tables = await TableService.getAllTables();
-      res
-        .status(200)
-        .json({
-          message: "Las mesas se han recuperado correctamente",
-          data: tables,
-        });
+      res.status(200).json({
+        message: "Las mesas se han recuperado correctamente",
+        data: tables,
+      });
     } catch (error: any) {
       console.error(`[TABLE ERROR] GetAll: ${error.message}`);
+      res.status(500).json({ error: "Error interno del servidor" });
+    }
+  },
+
+  async getPublic(req: Request, res: Response): Promise<void> {
+    try {
+      const tables = await TableService.getPublicTables();
+      res.status(200).json({
+        message: "Las mesas publicas se han recuperado correctamente",
+        data: tables,
+      });
+    } catch (error: any) {
+      console.error(`[TABLE ERROR] GetPublic: ${error.message}`);
       res.status(500).json({ error: "Error interno del servidor" });
     }
   },

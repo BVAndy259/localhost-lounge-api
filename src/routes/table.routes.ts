@@ -7,6 +7,8 @@ import { Roles } from "../constants/roles";
 const router = Router();
 const onlyAdmin = RoleMiddleware.checkRole([Roles.ADMIN]);
 
+router.get("/public", TableController.getPublic);
+
 router.get("/", AuthMiddleware.verifyToken, TableController.getAll);
 
 router.post("/", AuthMiddleware.verifyToken, onlyAdmin, TableController.create);
