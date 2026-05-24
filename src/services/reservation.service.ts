@@ -16,6 +16,35 @@ export const ReservationService = {
       email: string;
     };
   }) {
+    const reservationDurationMs = 120 * 60 * 1000;
+    const getCategory = (totalReservations: number) => {
+      if (totalReservations >= 6) return "VIP";
+      if (totalReservations >= 3) return "FRECUENTE";
+      return "NUEVO";
+    };
+
+    const getMinutesFromTime = (date: Date) =>
+      date.getHours() * 60 + date.getMinutes();
+
+    const isAllowedTime = (minutes: number) =>
+      minutes >= 18 * 60 || minutes < 2 * 60;
+
+    const buildDateTime = (date: Date, time: Date) => {
+      const value = new Date(date);
+      value.setHours(time.getHours(), time.getMinutes(), 0, 0);
+      return value;
+    };
+
+    const reservationDate = new Date(data.reservation_date);
+    const reservationTime = new Date(data.reservation_time);
+    const reservationMinutes = getMinutesFromTime(reservationTime);
+
+    if (!isAllowedTime(reservationMinutes)) {
+      throw new Error(
+        "El horario debe estar entre 18:00 y 02:00 para confirmar una reserva",
+      );
+    }
+
     let finalClientId: number;
 
     if (data.client_id) {
@@ -23,21 +52,61 @@ export const ReservationService = {
         where: { id: data.client_id },
       });
       if (!clientExists) throw new Error("Cliente no encontrado");
-      finalClientId = data.client_id;
-    } else if (data.client_data) {
-      const existingClient = await prisma.client.findFirst({
-        where: { phone_number: data.client_data.phone_number },
+      const updatedTotal = clientExists.total_reservations + 1;
+      await prisma.client.update({
+        where: { id: clientExists.id },
+        data: {
+          total_reservations: updatedTotal,
+          category: getCategory(updatedTotal),
+        },
       });
+      finalClientId = clientExists.id;
+    } else if (data.client_data) {
+      const normalizedPhone = data.client_data.phone_number?.trim();
+      const normalizedEmail = data.client_data.email?.trim().toLowerCase();
+      const orFilters = [
+        ...(normalizedPhone ? [{ phone_number: normalizedPhone }] : []),
+        ...(normalizedEmail ? [{ email: normalizedEmail }] : []),
+      ];
 
-      if (existingClient) {
+      const existingClients = orFilters.length
+        ? await prisma.client.findMany({
+            where: {
+              OR: orFilters,
+            },
+          })
+        : [];
+
+      if (existingClients.length > 1) {
+        throw new Error(
+          "El telefono y el correo pertenecen a clientes distintos",
+        );
+      }
+
+      if (existingClients.length === 1) {
+        const existingClient = existingClients[0];
+        const updatedTotal = existingClient.total_reservations + 1;
+        await prisma.client.update({
+          where: { id: existingClient.id },
+          data: {
+            name: data.client_data.name,
+            last_name: data.client_data.last_name,
+            phone_number: normalizedPhone || existingClient.phone_number,
+            email: normalizedEmail || existingClient.email,
+            total_reservations: updatedTotal,
+            category: getCategory(updatedTotal),
+          },
+        });
         finalClientId = existingClient.id;
       } else {
         const newClient = await prisma.client.create({
           data: {
             name: data.client_data.name,
             last_name: data.client_data.last_name,
-            phone_number: data.client_data.phone_number,
-            email: data.client_data.email,
+            phone_number: normalizedPhone || data.client_data.phone_number,
+            email: normalizedEmail || data.client_data.email,
+            total_reservations: 1,
+            category: getCategory(1),
           },
         });
         finalClientId = newClient.id;
@@ -58,16 +127,35 @@ export const ReservationService = {
     }
 
     const dateToSearch = new Date(data.reservation_date);
-    const existingReservation = await prisma.reservation.findFirst({
+    const existingReservations = await prisma.reservation.findMany({
       where: {
         table_id: data.table_id,
         reservation_date: dateToSearch,
         status: { in: ["PENDIENTE", "CONFIRMADA"] },
       },
+      select: {
+        reservation_date: true,
+        reservation_time: true,
+      },
     });
 
-    if (existingReservation) {
-      throw new Error("Esta mesa ya está reservada para la fecha seleccionada");
+    const newStart = buildDateTime(dateToSearch, reservationTime);
+    const newEnd = new Date(newStart.getTime() + reservationDurationMs);
+
+    const hasOverlap = existingReservations.some((reservation) => {
+      const existingStart = buildDateTime(
+        reservation.reservation_date,
+        reservation.reservation_time,
+      );
+      const existingEnd = new Date(
+        existingStart.getTime() + reservationDurationMs,
+      );
+
+      return newStart < existingEnd && existingStart < newEnd;
+    });
+
+    if (hasOverlap) {
+      throw new Error("Esta mesa ya está reservada en el horario seleccionado");
     }
 
     return await prisma.reservation.create({
@@ -76,7 +164,7 @@ export const ReservationService = {
         table_id: data.table_id,
         receptionist_id: data.receptionist_id || null,
         reservation_date: dateToSearch,
-        reservation_time: new Date(data.reservation_time),
+        reservation_time: reservationTime,
         number_people: data.number_people,
         notes: data.notes || "",
       },
