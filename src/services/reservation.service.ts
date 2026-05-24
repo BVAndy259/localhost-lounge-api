@@ -81,7 +81,7 @@ export const ReservationService = {
         notes: data.notes || "",
       },
       include: {
-        client: true, 
+        client: true,
         table: true,
       },
     });
