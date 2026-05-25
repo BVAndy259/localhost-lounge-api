@@ -1,15 +1,16 @@
-import prisma from "../config/prisma";
+import prisma from '../config/prisma';
+import HttpError from '../utils/httpError';
 
 export const WaiterService = {
   async createWaiter(name: string) {
     const existingWaiter = await prisma.waiter.findFirst({
       where: {
-        name: { equals: name, mode: "insensitive" },
+        name: { equals: name, mode: 'insensitive' },
       },
     });
 
     if (existingWaiter)
-      throw new Error("Ya hay un mesero con ese nombre registrado");
+      throw new HttpError(409, 'Ya hay un mesero con ese nombre registrado', 'WAITER_EXISTS');
 
     return await prisma.waiter.create({
       data: { name },
@@ -18,13 +19,14 @@ export const WaiterService = {
 
   async getAllWaiters() {
     return await prisma.waiter.findMany({
-      orderBy: { id: "asc" },
+      orderBy: { id: 'asc' },
     });
   },
 
   async updateWaiter(id: number, name: string) {
     const waiterExists = await prisma.waiter.findUnique({ where: { id } });
-    if (!waiterExists) throw new Error("No se ha encontrado el mesero");
+    if (!waiterExists)
+      throw new HttpError(404, 'No se ha encontrado el mesero', 'WAITER_NOT_FOUND');
 
     return await prisma.waiter.update({
       where: { id },
@@ -34,7 +36,8 @@ export const WaiterService = {
 
   async toggleWaiterStatus(id: number, active: boolean) {
     const waiterExists = await prisma.waiter.findUnique({ where: { id } });
-    if (!waiterExists) throw new Error("No se ha encontrado el mesero");
+    if (!waiterExists)
+      throw new HttpError(404, 'No se ha encontrado el mesero', 'WAITER_NOT_FOUND');
 
     return await prisma.waiter.update({
       where: { id },

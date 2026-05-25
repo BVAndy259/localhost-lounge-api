@@ -1,18 +1,21 @@
-import { Router } from "express";
-import { AuthMiddleware } from "../middlewares/auth.middleware";
-import { AuthController } from "../controllers/auth.controller";
-import { RoleMiddleware } from "../middlewares/role.middleware";
-import { Roles } from "../constants/roles";
+import { Router } from 'express';
+import { AuthMiddleware } from '../middlewares/auth.middleware';
+import { AuthController } from '../controllers/auth.controller';
+import { RoleMiddleware } from '../middlewares/role.middleware';
+import { Roles } from '../constants/roles';
+import validateBody from '../middlewares/validate.middleware';
+import { registerSchema, loginSchema } from '../validators/auth.validator';
 
 const router = Router();
 
 router.post(
-  "/register",
+  '/register',
   AuthMiddleware.verifyToken,
   RoleMiddleware.checkRole([Roles.ADMIN]),
-  AuthController.register,
+  validateBody(registerSchema),
+  AuthController.register
 );
 
-router.post("/login", AuthController.login);
+router.post('/login', validateBody(loginSchema), AuthController.login);
 
 export default router;

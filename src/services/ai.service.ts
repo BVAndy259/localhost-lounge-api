@@ -1,11 +1,11 @@
 async function callOllama(prompt: string) {
-  const response = await fetch("http://localhost:11434/api/generate", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+  const response = await fetch('http://localhost:11434/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: "llama3.2",
+      model: 'llama3.2',
       prompt: prompt,
-      format: "json",
+      format: 'json',
       stream: false,
       options: {
         temperature: 0.2,
@@ -23,15 +23,13 @@ async function callOllama(prompt: string) {
 
 function formatHistory(history: { role: string; content: string }[]) {
   return history.length > 0
-    ? history
-        .map((h) => `${h.role === "BOT" ? "Assistant" : "User"}: ${h.content}`)
-        .join("\n")
-    : "No previous history.";
+    ? history.map((h) => `${h.role === 'BOT' ? 'Assistant' : 'User'}: ${h.content}`).join('\n')
+    : 'No previous history.';
 }
 export const AIService = {
   async processClientWebMessage(
     clientMessage: string,
-    history: { role: string; content: string }[],
+    history: { role: string; content: string }[]
   ) {
     try {
       const prompt = `
@@ -81,18 +79,18 @@ export const AIService = {
 
       return await callOllama(prompt);
     } catch (error) {
-      console.error("[IA ERROR] Copiloto Cliente falló:", error);
+      const { logger } = await import('../utils/logger');
+      logger.error('[IA ERROR] Copiloto Cliente falló:', error);
       return {
-        action: "HUMAN_INTERVENTION",
-        reply:
-          "Tuvimos un error de conexión en nuestro sistema. Un asesor te ayudará pronto.",
+        action: 'HUMAN_INTERVENTION',
+        reply: 'Tuvimos un error de conexión en nuestro sistema. Un asesor te ayudará pronto.',
         payload: {},
       };
     }
   },
   async processWorkerWebMessage(
     workerMessage: string,
-    history: { role: string; content: string }[],
+    history: { role: string; content: string }[]
   ) {
     try {
       const prompt = `
@@ -124,11 +122,12 @@ export const AIService = {
 
       return await callOllama(prompt);
     } catch (error) {
-      console.error("[IA ERROR] Copiloto Trabajador falló:", error);
+      const { logger } = await import('../utils/logger');
+      logger.error('[IA ERROR] Copiloto Trabajador falló:', error);
       return {
-        action: "REPLY",
+        action: 'REPLY',
         reply:
-          "Error interno del motor de IA. Por favor, utiliza los menús de navegación manuales de la izquierda.",
+          'Error interno del motor de IA. Por favor, utiliza los menús de navegación manuales de la izquierda.',
         payload: {},
       };
     }

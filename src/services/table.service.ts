@@ -1,4 +1,5 @@
-import prisma from "../config/prisma";
+import prisma from '../config/prisma';
+import HttpError from '../utils/httpError';
 
 export const TableService = {
   async createTable(data: {
@@ -15,7 +16,11 @@ export const TableService = {
     });
 
     if (existingTable)
-      throw new Error(`La mesa con el número ${data.table_number} ya existe`);
+      throw new HttpError(
+        409,
+        `La mesa con el número ${data.table_number} ya existe`,
+        'TABLE_EXISTS'
+      );
 
     return await prisma.table.create({ data });
   },
@@ -31,7 +36,7 @@ export const TableService = {
         },
       },
       orderBy: {
-        table_number: "asc",
+        table_number: 'asc',
       },
     });
   },
@@ -48,7 +53,7 @@ export const TableService = {
         description: true,
       },
       orderBy: {
-        table_number: "asc",
+        table_number: 'asc',
       },
     });
   },
@@ -60,10 +65,10 @@ export const TableService = {
       type?: string;
       reservation_price?: number;
       description: string;
-    },
+    }
   ) {
     const tableExists = await prisma.table.findUnique({ where: { id } });
-    if (!tableExists) throw new Error("Mesa no encontrada");
+    if (!tableExists) throw new HttpError(404, 'Mesa no encontrada', 'TABLE_NOT_FOUND');
 
     return await prisma.table.update({
       where: { id },
@@ -71,17 +76,12 @@ export const TableService = {
     });
   },
 
-  async changeTableStatus(
-    id: number,
-    status: string,
-    waiter_id?: number | null,
-  ) {
+  async changeTableStatus(id: number, status: string, waiter_id?: number | null) {
     const tableExists = await prisma.table.findUnique({ where: { id } });
-    if (!tableExists) throw new Error("Mesa no encontrada");
-
+    if (!tableExists) throw new HttpError(404, 'Mesa no encontrada', 'TABLE_NOT_FOUND');
     const updateData: any = { status };
 
-    if (status === "LIBRE") {
+    if (status === 'LIBRE') {
       updateData.waiter_id = null;
     } else if (waiter_id != undefined) {
       if (waiter_id !== null) {
@@ -89,7 +89,11 @@ export const TableService = {
           where: { id: waiter_id },
         });
         if (!waiterExists || !waiterExists.active) {
-          throw new Error("El mesero asignado no existe o está inactivo");
+          throw new HttpError(
+            400,
+            'El mesero asignado no existe o está inactivo',
+            'WAITER_INVALID'
+          );
         }
       }
       updateData.waiter_id = waiter_id;
@@ -104,7 +108,7 @@ export const TableService = {
 
   async toggleTableActive(id: number, active: boolean) {
     const tableExists = await prisma.table.findUnique({ where: { id } });
-    if (!tableExists) throw new Error("Mesa no encontrada");
+    if (!tableExists) throw new Error('Mesa no encontrada');
 
     return await prisma.table.update({
       where: { id },

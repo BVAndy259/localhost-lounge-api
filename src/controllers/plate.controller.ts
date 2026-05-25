@@ -1,5 +1,6 @@
-import { Request, Response } from "express";
-import { PlateService } from "../services/plate.service";
+import { Request, Response } from 'express';
+import { PlateService } from '../services/plate.service';
+import { logger } from '../utils/logger';
 
 export const PlateController = {
   async create(req: Request, res: Response): Promise<void> {
@@ -7,9 +8,7 @@ export const PlateController = {
       const { name, description, price, category, image_url } = req.body;
 
       if (!name || price === undefined || !category) {
-        res
-          .status(400)
-          .json({ error: "Nombre, precio y categoria son requeridos" });
+        res.status(400).json({ error: 'Nombre, precio y categoria son requeridos' });
         return;
       }
 
@@ -21,11 +20,11 @@ export const PlateController = {
         image_url,
       });
       res.status(201).json({
-        message: "El plato se ha creado correctamente",
+        message: 'El plato se ha creado correctamente',
         data: newPlate,
       });
     } catch (error: any) {
-      console.error(`[PLATE ERROR] Create: ${error.message}`);
+      logger.error(`[PLATE ERROR] Create: ${error?.message ?? error}`);
       res.status(400).json({ error: error.message });
     }
   },
@@ -35,12 +34,12 @@ export const PlateController = {
       const plates = await PlateService.getAllPlate();
 
       res.status(200).json({
-        message: "Se ha recuperado correctamente los platos",
+        message: 'Se ha recuperado correctamente los platos',
         data: plates,
       });
     } catch (error: any) {
-      console.error(`[PLATE ERROR] GetAll: ${error.message}`);
-      res.status(500).json({ error: "Error interno del servidor" });
+      logger.error(`[PLATE ERROR] GetAll: ${error?.message ?? error}`);
+      res.status(500).json({ error: 'Error interno del servidor' });
     }
   },
 
@@ -49,12 +48,12 @@ export const PlateController = {
       const plates = await PlateService.getPublicPlates();
 
       res.status(200).json({
-        message: "Se ha recuperado correctamente los platos disponibles",
+        message: 'Se ha recuperado correctamente los platos disponibles',
         data: plates,
       });
     } catch (error: any) {
-      console.error(`[PLATE ERROR] GetPublic: ${error.message}`);
-      res.status(500).json({ error: "Error interno del servidor" });
+      logger.error(`[PLATE ERROR] GetPublic: ${error?.message ?? error}`);
+      res.status(500).json({ error: 'Error interno del servidor' });
     }
   },
 
@@ -63,7 +62,7 @@ export const PlateController = {
       const plateId = parseInt(req.params.id as string, 10);
 
       if (isNaN(plateId)) {
-        res.status(400).json({ error: "Formato de ID de plato no válido" });
+        res.status(400).json({ error: 'Formato de ID de plato no válido' });
         return;
       }
 
@@ -77,12 +76,12 @@ export const PlateController = {
         image_url,
       });
       res.status(200).json({
-        message: "El plato se ha actualizado correctamente",
+        message: 'El plato se ha actualizado correctamente',
         data: updatePlate,
       });
     } catch (error: any) {
-      console.error(`[PLATE ERROR] Update: ${error.message}`);
-      if (error.message === "Plato no encontrado") {
+      logger.error(`[PLATE ERROR] Update: ${error?.message ?? error}`);
+      if (error.message === 'Plato no encontrado') {
         res.status(404).json({ error: error.message });
         return;
       }
@@ -94,33 +93,26 @@ export const PlateController = {
     try {
       const plateId = parseInt(req.params.id as string, 10);
       if (isNaN(plateId)) {
-        res.status(400).json({ error: "Formato de ID de plato no válido" });
+        res.status(400).json({ error: 'Formato de ID de plato no válido' });
         return;
       }
 
       const { available } = req.body;
-      if (typeof available !== "boolean") {
-        res
-          .status(400)
-          .json({ error: "El campo «available» debe ser un valor booleano" });
+      if (typeof available !== 'boolean') {
+        res.status(400).json({ error: 'El campo «available» debe ser un valor booleano' });
         return;
       }
 
-      const updatePlate = await PlateService.toggleAvailability(
-        plateId,
-        available,
-      );
-      const statusMessage = available
-        ? "disponible"
-        : "no disponible/sin stock";
+      const updatePlate = await PlateService.toggleAvailability(plateId, available);
+      const statusMessage = available ? 'disponible' : 'no disponible/sin stock';
 
       res.status(200).json({
         message: `Plato ${statusMessage} con éxito`,
         data: updatePlate,
       });
     } catch (error: any) {
-      console.error(`[PLATE ERROR] ToggleStatus: ${error.message}`);
-      if (error.message === "Plato no encontrado") {
+      logger.error(`[PLATE ERROR] ToggleStatus: ${error?.message ?? error}`);
+      if (error.message === 'Plato no encontrado') {
         res.status(404).json({ error: error.message });
         return;
       }

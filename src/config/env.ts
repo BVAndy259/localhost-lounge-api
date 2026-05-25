@@ -1,4 +1,4 @@
-import * as dotenv from "dotenv";
+import * as dotenv from 'dotenv';
 
 dotenv.config();
 
@@ -12,17 +12,13 @@ export const env = {
 };
 
 if (!env.DATABASE_URL) {
-  throw new Error(
-    "[ENV ERROR] Falta la variable DATABASE_URL en el archivo .env",
-  );
+  throw new Error('[ENV ERROR] Falta la variable DATABASE_URL en el archivo .env');
 }
 
 if (!env.JWT_SECRET) {
-  throw new Error("[ENV ERROR] Falta JWT_SECRET en el archivo .env");
+  throw new Error('[ENV ERROR] Falta JWT_SECRET en el archivo .env');
 }
 
 if (!env.ADMIN_NAME || !env.ADMIN_EMAIL || !env.ADMIN_PASSWORD) {
-  throw new Error(
-    "[ENV ERROR] Falta nombre, email o contraseña en el archivo .env",
-  );
+  throw new Error('[ENV ERROR] Falta nombre, email o contraseña en el archivo .env');
 }

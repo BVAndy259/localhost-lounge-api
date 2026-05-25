@@ -1,4 +1,5 @@
-import prisma from "../config/prisma";
+import prisma from '../config/prisma';
+import HttpError from '../utils/httpError';
 
 export const ReservationService = {
   async createReservation(data: {
@@ -18,16 +19,14 @@ export const ReservationService = {
   }) {
     const reservationDurationMs = 120 * 60 * 1000;
     const getCategory = (totalReservations: number) => {
-      if (totalReservations >= 6) return "VIP";
-      if (totalReservations >= 3) return "FRECUENTE";
-      return "NUEVO";
+      if (totalReservations >= 6) return 'VIP';
+      if (totalReservations >= 3) return 'FRECUENTE';
+      return 'NUEVO';
     };
 
-    const getMinutesFromTime = (date: Date) =>
-      date.getHours() * 60 + date.getMinutes();
+    const getMinutesFromTime = (date: Date) => date.getHours() * 60 + date.getMinutes();
 
-    const isAllowedTime = (minutes: number) =>
-      minutes >= 18 * 60 || minutes < 2 * 60;
+    const isAllowedTime = (minutes: number) => minutes >= 18 * 60 || minutes < 2 * 60;
 
     const buildDateTime = (date: Date, time: Date) => {
       const value = new Date(date);
@@ -35,13 +34,14 @@ export const ReservationService = {
       return value;
     };
 
-    const reservationDate = new Date(data.reservation_date);
     const reservationTime = new Date(data.reservation_time);
     const reservationMinutes = getMinutesFromTime(reservationTime);
 
     if (!isAllowedTime(reservationMinutes)) {
-      throw new Error(
-        "El horario debe estar entre 18:00 y 02:00 para confirmar una reserva",
+      throw new HttpError(
+        400,
+        'El horario debe estar entre 18:00 y 02:00 para confirmar una reserva',
+        'INVALID_TIME'
       );
     }
 
@@ -51,7 +51,7 @@ export const ReservationService = {
       const clientExists = await prisma.client.findUnique({
         where: { id: data.client_id },
       });
-      if (!clientExists) throw new Error("Cliente no encontrado");
+      if (!clientExists) throw new HttpError(404, 'Cliente no encontrado', 'CLIENT_NOT_FOUND');
       const updatedTotal = clientExists.total_reservations + 1;
       await prisma.client.update({
         where: { id: clientExists.id },
@@ -78,8 +78,10 @@ export const ReservationService = {
         : [];
 
       if (existingClients.length > 1) {
-        throw new Error(
-          "El telefono y el correo pertenecen a clientes distintos",
+        throw new HttpError(
+          409,
+          'El telefono y el correo pertenecen a clientes distintos',
+          'CLIENT_CONFLICT'
         );
       }
 
@@ -112,17 +114,23 @@ export const ReservationService = {
         finalClientId = newClient.id;
       }
     } else {
-      throw new Error("Debes proporcionar un client_id o unos client_data");
+      throw new HttpError(
+        400,
+        'Debes proporcionar un client_id o unos client_data',
+        'MISSING_CLIENT'
+      );
     }
 
     const table = await prisma.table.findUnique({
       where: { id: data.table_id },
     });
-    if (!table) throw new Error("Mesa no encontrada");
+    if (!table) throw new HttpError(404, 'Mesa no encontrada', 'TABLE_NOT_FOUND');
 
     if (data.number_people > table.capacity) {
-      throw new Error(
+      throw new HttpError(
+        400,
         `Se ha superado la capacidad de la mesa. El máximo permitido es de ${table.capacity} personas.`,
+        'CAPACITY_EXCEEDED'
       );
     }
 
@@ -131,7 +139,7 @@ export const ReservationService = {
       where: {
         table_id: data.table_id,
         reservation_date: dateToSearch,
-        status: { in: ["PENDIENTE", "CONFIRMADA"] },
+        status: { in: ['PENDIENTE', 'CONFIRMADA'] },
       },
       select: {
         reservation_date: true,
@@ -145,17 +153,19 @@ export const ReservationService = {
     const hasOverlap = existingReservations.some((reservation) => {
       const existingStart = buildDateTime(
         reservation.reservation_date,
-        reservation.reservation_time,
+        reservation.reservation_time
       );
-      const existingEnd = new Date(
-        existingStart.getTime() + reservationDurationMs,
-      );
+      const existingEnd = new Date(existingStart.getTime() + reservationDurationMs);
 
       return newStart < existingEnd && existingStart < newEnd;
     });
 
     if (hasOverlap) {
-      throw new Error("Esta mesa ya está reservada en el horario seleccionado");
+      throw new HttpError(
+        409,
+        'Esta mesa ya está reservada en el horario seleccionado',
+        'TABLE_BUSY'
+      );
     }
 
     return await prisma.reservation.create({
@@ -166,7 +176,7 @@ export const ReservationService = {
         reservation_date: dateToSearch,
         reservation_time: reservationTime,
         number_people: data.number_people,
-        notes: data.notes || "",
+        notes: data.notes || '',
       },
       include: {
         client: true,
@@ -189,26 +199,26 @@ export const ReservationService = {
         table: { select: { table_number: true, type: true } },
         receptionist: { select: { name: true } },
       },
-      orderBy: [{ reservation_date: "asc" }, { reservation_time: "asc" }],
+      orderBy: [{ reservation_date: 'asc' }, { reservation_time: 'asc' }],
     });
   },
 
   async updateStatus(id: number, status: string) {
-    const validStatuses = [
-      "PENDIENTE",
-      "CONFIRMADA",
-      "CANCELADA",
-      "COMPLETADA",
-    ];
+    const validStatuses = ['PENDIENTE', 'CONFIRMADA', 'CANCELADA', 'COMPLETADA'];
 
     if (!validStatuses.includes(status.toUpperCase())) {
-      throw new Error(`Estado no válido. Validos: ${validStatuses.join(", ")}`);
+      throw new HttpError(
+        400,
+        `Estado no válido. Validos: ${validStatuses.join(', ')}`,
+        'INVALID_STATUS'
+      );
     }
 
     const reservationExistis = await prisma.reservation.findUnique({
       where: { id },
     });
-    if (!reservationExistis) throw new Error("Reserva no encontrada");
+    if (!reservationExistis)
+      throw new HttpError(404, 'Reserva no encontrada', 'RESERVATION_NOT_FOUND');
 
     return await prisma.reservation.update({
       where: { id },

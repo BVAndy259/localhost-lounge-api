@@ -1,4 +1,5 @@
-import prisma from "../config/prisma";
+import prisma from '../config/prisma';
+import HttpError from '../utils/httpError';
 
 export const PlateService = {
   async createPlate(data: {
@@ -10,26 +11,26 @@ export const PlateService = {
   }) {
     const existingPlate = await prisma.plate.findFirst({
       where: {
-        name: { equals: data.name, mode: "insensitive" },
+        name: { equals: data.name, mode: 'insensitive' },
       },
     });
 
     if (existingPlate)
-      throw new Error("En el menú ya hay un plato con ese nombre");
+      throw new HttpError(409, 'En el menú ya hay un plato con ese nombre', 'PLATE_EXISTS');
 
     return await prisma.plate.create({ data });
   },
 
   async getAllPlate() {
     return await prisma.plate.findMany({
-      orderBy: [{ category: "asc" }, { name: "asc" }],
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
     });
   },
 
   async getPublicPlates() {
     return await prisma.plate.findMany({
       where: { available: true },
-      orderBy: [{ category: "asc" }, { name: "asc" }],
+      orderBy: [{ category: 'asc' }, { name: 'asc' }],
     });
   },
 
@@ -41,10 +42,10 @@ export const PlateService = {
       price: number;
       category: string;
       image_url?: string;
-    },
+    }
   ) {
     const plateExists = await prisma.plate.findUnique({ where: { id } });
-    if (!plateExists) throw new Error("Plato no encontrado");
+    if (!plateExists) throw new HttpError(404, 'Plato no encontrado', 'PLATE_NOT_FOUND');
 
     return await prisma.plate.update({
       where: { id },
@@ -54,7 +55,7 @@ export const PlateService = {
 
   async toggleAvailability(id: number, available: boolean) {
     const plateExists = await prisma.plate.findUnique({ where: { id } });
-    if (!plateExists) throw new Error("Plato no encontrado");
+    if (!plateExists) throw new HttpError(404, 'Plato no encontrado', 'PLATE_NOT_FOUND');
 
     return await prisma.plate.update({
       where: { id },

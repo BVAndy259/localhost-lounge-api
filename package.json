@@ -7,6 +7,9 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0",
+    "format": "prettier --write \"src/**/*.{ts,js,json,md}\"",
+    "test": "vitest",
     "seed": "ts-node prisma/seed.ts"
   },
   "keywords": [],
@@ -36,6 +39,13 @@
     "prisma": "^7.8.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
-    "typescript": "^6.0.3"
+    "typescript": "5.4.5",
+    "eslint": "^8.57.0",
+    "@typescript-eslint/parser": "^8.60.0",
+    "@typescript-eslint/eslint-plugin": "^8.60.0",
+    "prettier": "^3.0.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "vitest": "^1.0.0"
   }
 }
