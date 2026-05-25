@@ -29,7 +29,7 @@ export const PlateController = {
     }
   },
 
-  async getAll(req: Request, res: Response): Promise<void> {
+  async getAll(res: Response): Promise<void> {
     try {
       const plates = await PlateService.getAllPlate();
 

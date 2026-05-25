@@ -36,7 +36,7 @@ export const TableController = {
     }
   },
 
-  async getAll(req: Request, res: Response): Promise<void> {
+  async getAll(res: Response): Promise<void> {
     try {
       const tables = await TableService.getAllTables();
       res.status(200).json({
@@ -49,7 +49,7 @@ export const TableController = {
     }
   },
 
-  async getPublic(req: Request, res: Response): Promise<void> {
+  async getPublic(res: Response): Promise<void> {
     try {
       const tables = await TableService.getPublicTables();
       res.status(200).json({

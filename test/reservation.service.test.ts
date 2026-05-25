@@ -1,7 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import HttpError from '../src/utils/httpError';
 
-// Mock prisma module
 vi.mock('../src/config/prisma', () => {
   const mockPrisma = {
     client: {
@@ -34,7 +33,7 @@ describe('ReservationService', () => {
     const payload = {
       table_id: 1,
       reservation_date: '2026-05-26',
-      reservation_time: '1970-01-01T15:00:00', // 15:00
+      reservation_time: '1970-01-01T15:00:00',
       number_people: 2,
       client_data: {
         name: 'Test',

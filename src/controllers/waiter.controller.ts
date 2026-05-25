@@ -23,7 +23,7 @@ export const WaiterController = {
     }
   },
 
-  async getAll(req: Request, res: Response): Promise<void> {
+  async getAll(res: Response): Promise<void> {
     try {
       const waiters = await WaiterService.getAllWaiters();
       res.status(200).json({
