@@ -10,7 +10,10 @@ export const createReservationSchema = z.object({
   }),
   number_people: z.preprocess((val) => Number(val), z.number().int().positive()),
   notes: z.string().optional(),
-  client_id: z.preprocess((val) => (val === undefined ? undefined : Number(val))).optional(),
+  client_id: z.preprocess(
+    (val) => (val === undefined || val === null || val === '' ? undefined : Number(val)),
+    z.number().int().positive().optional()
+  ),
   client_data: z
     .object({
       name: z.string().min(1),
@@ -18,7 +21,6 @@ export const createReservationSchema = z.object({
       phone_number: z.string().min(7),
       email: z.string().email(),
     })
-    .partial()
     .optional(),
 });
 

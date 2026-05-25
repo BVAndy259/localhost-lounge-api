@@ -35,14 +35,7 @@ export const ReservationController = {
         number_people: Number(number_people),
         notes,
         client_id: client_id ? Number(client_id) : undefined,
-        client_data: client_data
-          ? {
-              name: client_data.name,
-              last_name: client_data.last_name,
-              phone_number: client_data.phone_number,
-              email: client_data.email,
-            }
-          : undefined,
+        client_data,
       });
 
       res.status(201).json({

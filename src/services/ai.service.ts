@@ -79,7 +79,7 @@ export const AIService = {
 
       return await callOllama(prompt);
     } catch (error) {
-      const { logger } = await import('../utils/logger');
+      const { logger } = await import('../utils/logger.js');
       logger.error('[IA ERROR] Copiloto Cliente falló:', error);
       return {
         action: 'HUMAN_INTERVENTION',
@@ -122,7 +122,7 @@ export const AIService = {
 
       return await callOllama(prompt);
     } catch (error) {
-      const { logger } = await import('../utils/logger');
+      const { logger } = await import('../utils/logger.js');
       logger.error('[IA ERROR] Copiloto Trabajador falló:', error);
       return {
         action: 'REPLY',
