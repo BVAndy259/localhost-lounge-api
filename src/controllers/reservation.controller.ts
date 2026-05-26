@@ -52,7 +52,7 @@ export const ReservationController = {
     }
   },
 
-  async getAll(res: Response): Promise<void> {
+  async getAll(req: AuthRequest, res: Response): Promise<void> {
     try {
       const reservations = await ReservationService.getAllReservations();
       res.status(200).json({ message: 'Reservas recuperadas', data: reservations });

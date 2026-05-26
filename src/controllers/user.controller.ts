@@ -3,7 +3,7 @@ import { UserService } from '../services/user.service';
 import { logger } from '../utils/logger';
 
 export const UserController = {
-  async getAll(res: Response): Promise<void> {
+  async getAll(req: Request, res: Response): Promise<void> {
     try {
       const users = await UserService.getAllUsers();
       res.status(200).json({

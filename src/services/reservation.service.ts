@@ -24,20 +24,31 @@ export const ReservationService = {
       return 'NUEVO';
     };
 
-    const getMinutesFromTime = (date: Date) => date.getHours() * 60 + date.getMinutes();
+    const parseTime = (time: string) => {
+      const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
+      if (!match) {
+        throw new HttpError(400, 'Formato de hora inválido. Usa HH:MM', 'INVALID_TIME_FORMAT');
+      }
 
-    const isAllowedTime = (minutes: number) => minutes >= 18 * 60 || minutes < 2 * 60;
+      const hours = Number(match[1]);
+      const minutes = Number(match[2]);
+      const totalMinutes = hours * 60 + minutes;
+      return { hours, minutes, totalMinutes };
+    };
 
-    const buildDateTime = (date: Date, time: Date) => {
+    const isAllowedTime = (minutes: number) => minutes >= 18 * 60 || minutes <= 2 * 60;
+
+    const buildDateTime = (date: Date, hours: number, minutes: number) => {
       const value = new Date(date);
-      value.setHours(time.getHours(), time.getMinutes(), 0, 0);
+      value.setHours(hours, minutes, 0, 0);
       return value;
     };
 
-    const reservationTime = new Date(data.reservation_time);
-    const reservationMinutes = getMinutesFromTime(reservationTime);
+    const { hours, minutes, totalMinutes } = parseTime(data.reservation_time);
+    const reservationTimeForDb = new Date(0);
+    reservationTimeForDb.setHours(hours, minutes, 0, 0);
 
-    if (!isAllowedTime(reservationMinutes)) {
+    if (!isAllowedTime(totalMinutes)) {
       throw new HttpError(
         400,
         'El horario debe estar entre 18:00 y 02:00 para confirmar una reserva',
@@ -147,13 +158,14 @@ export const ReservationService = {
       },
     });
 
-    const newStart = buildDateTime(dateToSearch, reservationTime);
+    const newStart = buildDateTime(dateToSearch, hours, minutes);
     const newEnd = new Date(newStart.getTime() + reservationDurationMs);
 
     const hasOverlap = existingReservations.some((reservation) => {
       const existingStart = buildDateTime(
         reservation.reservation_date,
-        reservation.reservation_time
+        reservation.reservation_time.getHours(),
+        reservation.reservation_time.getMinutes()
       );
       const existingEnd = new Date(existingStart.getTime() + reservationDurationMs);
 
@@ -174,7 +186,7 @@ export const ReservationService = {
         table_id: data.table_id,
         receptionist_id: data.receptionist_id || null,
         reservation_date: dateToSearch,
-        reservation_time: reservationTime,
+        reservation_time: reservationTimeForDb,
         number_people: data.number_people,
         notes: data.notes || '',
       },

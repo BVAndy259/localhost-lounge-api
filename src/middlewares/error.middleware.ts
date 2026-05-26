@@ -2,7 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { logger } from '../utils/logger';
 import HttpError from '../utils/httpError';
 
-export function errorHandler(err: any, req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: any, req: Request, res: Response, next: NextFunction) {
+  void req;
+  void next;
   logger.error(err?.message ?? err);
 
   if (err instanceof HttpError) {
