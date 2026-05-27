@@ -40,13 +40,13 @@ export const ReservationService = {
 
     const buildDateTime = (date: Date, hours: number, minutes: number) => {
       const value = new Date(date);
-      value.setHours(hours, minutes, 0, 0);
+      value.setUTCHours(hours, minutes, 0, 0);
       return value;
     };
 
     const { hours, minutes, totalMinutes } = parseTime(data.reservation_time);
-    const reservationTimeForDb = new Date(0);
-    reservationTimeForDb.setHours(hours, minutes, 0, 0);
+
+    const reservationTimeForDb = new Date(Date.UTC(1970, 0, 1, hours, minutes, 0, 0));
 
     if (!isAllowedTime(totalMinutes)) {
       throw new HttpError(
