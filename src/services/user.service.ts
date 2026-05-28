@@ -2,6 +2,19 @@ import prisma from '../config/prisma';
 import HttpError from '../utils/httpError';
 
 export const UserService = {
+  async getUserById(id: number) {
+    return await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        active: true,
+      },
+    });
+  },
+
   async getAllUsers() {
     return await prisma.user.findMany({
       select: {

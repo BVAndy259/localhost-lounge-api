@@ -6,6 +6,7 @@ export interface AuthRequest extends Request {
   user?: {
     id: number;
     role: string;
+    isSuperAdmin?: boolean;
   };
 }
 
@@ -26,6 +27,7 @@ export const AuthMiddleware = {
       const decoded = jwt.verify(token, env.JWT_SECRET) as {
         id: number;
         role: string;
+        isSuperAdmin?: boolean;
       };
 
       req.user = decoded;

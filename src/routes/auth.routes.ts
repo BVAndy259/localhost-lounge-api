@@ -8,6 +8,8 @@ import { registerSchema, loginSchema } from '../validators/auth.validator';
 
 const router = Router();
 
+router.get('/me', AuthMiddleware.verifyToken, AuthController.me);
+
 router.post(
   '/register',
   AuthMiddleware.verifyToken,

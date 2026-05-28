@@ -12,10 +12,11 @@ import {
 
 const router = Router();
 const onlyAdmin = RoleMiddleware.checkRole([Roles.ADMIN]);
+const staffOnly = RoleMiddleware.checkRole([Roles.ADMIN, Roles.RECEPCIONISTA]);
 
 router.get('/public', TableController.getPublic);
 
-router.get('/', AuthMiddleware.verifyToken, TableController.getAll);
+router.get('/', AuthMiddleware.verifyToken, staffOnly, TableController.getAll);
 
 router.post(
   '/',
@@ -31,7 +32,7 @@ router.put(
   validateBody(updateTableSchema),
   TableController.update
 );
-router.patch('/:id/status', AuthMiddleware.verifyToken, onlyAdmin, TableController.changeStatus);
+router.patch('/:id/status', AuthMiddleware.verifyToken, staffOnly, TableController.changeStatus);
 router.patch(
   '/:id/active',
   AuthMiddleware.verifyToken,
