@@ -62,7 +62,7 @@ export const AIService = {
 
         Rules for "payload":
         - If "SHOW_RESERVATION_FORM", return {"people": number, "type": string | null}.
-        - If "CREATE_RESERVATION", return {"people": number, "date": "YYYY-MM-DD", "time": "HH:mm", "type": string | null, "table_number": number | null, "notes": string | null, "client": {"name": string, "last_name": string, "phone_number": string, "email": string}}.
+        - If "CREATE_RESERVATION", return {"people": number, "date": "YYYY-MM-DD", "time": "HH:mm", "type": string | null, "table_number": string | null, "notes": string | null, "client": {"name": string, "last_name": string, "phone_number": string, "email": string}}.
         - If "SHOW_MENU", return {"category": string | null, "plate_name": string | null}.
         - If "NAVIGATE_PROFILE", return {"contact": {"email": string | null, "phone_number": string | null}}.
         - Otherwise, return {}.

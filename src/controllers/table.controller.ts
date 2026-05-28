@@ -7,22 +7,27 @@ export const TableController = {
     try {
       const { table_number, capacity, type, reservation_price, description } = req.body;
 
-      if (
-        table_number === undefined ||
-        !capacity ||
-        !type ||
-        reservation_price === undefined ||
-        !description
-      ) {
+      if (table_number === undefined || !capacity) {
         res.status(400).json({ error: 'Todos los campos son obligatorios' });
         return;
       }
 
+      const normalizedType = type ? String(type).toUpperCase() : 'NORMAL';
+      const allowedTypes = ['NORMAL', 'VIP'];
+
+      if (!allowedTypes.includes(normalizedType)) {
+        res.status(400).json({ error: 'Tipo no válido. Valores permitidos: NORMAL, VIP' });
+        return;
+      }
+
       const newTable = await TableService.createTable({
-        table_number: parseInt(table_number, 10),
+        table_number: String(table_number).trim(),
         capacity: parseInt(capacity, 10),
-        type,
-        reservation_price: parseFloat(reservation_price),
+        type: normalizedType,
+        reservation_price:
+          reservation_price !== undefined && reservation_price !== ''
+            ? parseFloat(reservation_price)
+            : undefined,
         description,
       });
 
@@ -72,9 +77,15 @@ export const TableController = {
 
       const { capacity, type, reservation_price, description } = req.body;
 
+      const normalizedType = type ? String(type).toUpperCase() : undefined;
+      if (normalizedType && !['NORMAL', 'VIP'].includes(normalizedType)) {
+        res.status(400).json({ error: 'Tipo no válido. Valores permitidos: NORMAL, VIP' });
+        return;
+      }
+
       const updateTable = await TableService.updateTable(tableId, {
         capacity: capacity ? parseInt(capacity, 10) : undefined,
-        type,
+        type: normalizedType,
         reservation_price: reservation_price ? parseFloat(reservation_price) : undefined,
         description,
       });
