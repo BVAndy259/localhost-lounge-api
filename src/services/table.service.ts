@@ -3,11 +3,11 @@ import HttpError from '../utils/httpError';
 
 export const TableService = {
   async createTable(data: {
-    table_number: number;
+    table_number: string;
     capacity: number;
-    type: string;
-    reservation_price: number;
-    description: string;
+    type?: string;
+    reservation_price?: number;
+    description?: string;
   }) {
     const existingTable = await prisma.table.findFirst({
       where: {
@@ -22,7 +22,15 @@ export const TableService = {
         'TABLE_EXISTS'
       );
 
-    return await prisma.table.create({ data });
+    return await prisma.table.create({
+      data: {
+        table_number: data.table_number,
+        capacity: data.capacity,
+        type: data.type ?? 'NORMAL',
+        reservation_price: data.reservation_price ?? 0,
+        description: data.description ?? `Mesa ${data.table_number}`,
+      },
+    });
   },
 
   async getAllTables() {
@@ -48,9 +56,14 @@ export const TableService = {
         id: true,
         table_number: true,
         capacity: true,
-        type: true,
-        reservation_price: true,
-        description: true,
+        status: true,
+        active: true,
+        waiter: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: {
         table_number: 'asc',
@@ -64,7 +77,7 @@ export const TableService = {
       capacity?: number;
       type?: string;
       reservation_price?: number;
-      description: string;
+      description?: string;
     }
   ) {
     const tableExists = await prisma.table.findUnique({ where: { id } });
@@ -99,10 +112,35 @@ export const TableService = {
       updateData.waiter_id = waiter_id;
     }
 
+    if (status !== 'LIBRE' && waiter_id == null) {
+      throw new HttpError(
+        400,
+        'Debes asignar un mesero cuando la mesa está ocupada o reservada',
+        'WAITER_REQUIRED'
+      );
+    }
+
+    if (waiter_id != null && status !== 'LIBRE') {
+      const assignedTables = await prisma.table.count({
+        where: {
+          waiter_id,
+          id: { not: id },
+        },
+      });
+
+      if (assignedTables >= 4) {
+        throw new HttpError(
+          400,
+          'Ese mesero ya tiene asignadas 4 mesas como máximo',
+          'WAITER_LIMIT_REACHED'
+        );
+      }
+    }
+
     return await prisma.table.update({
       where: { id },
       data: updateData,
-      include: { waiter: { select: { name: true } } },
+      include: { waiter: { select: { id: true, name: true } } },
     });
   },
 
