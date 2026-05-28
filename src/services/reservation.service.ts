@@ -1,6 +1,34 @@
 import prisma from '../config/prisma';
 import HttpError from '../utils/httpError';
 
+const PERU_TIME_ZONE = 'America/Lima';
+
+const parsePeruDate = (date: string) => new Date(`${date}T00:00:00-05:00`);
+
+const formatReservationDate = (date: Date) =>
+  new Intl.DateTimeFormat('es-PE', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+
+const formatReservationTime = (date: Date) =>
+  new Intl.DateTimeFormat('es-PE', {
+    timeZone: PERU_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+
+const serializeReservation = <T extends { reservation_date: Date; reservation_time: Date }>(
+  reservation: T
+) => ({
+  ...reservation,
+  reservation_date: formatReservationDate(reservation.reservation_date),
+  reservation_time: formatReservationTime(reservation.reservation_time),
+});
+
 export const ReservationService = {
   async createReservation(data: {
     table_id: number;
@@ -46,7 +74,9 @@ export const ReservationService = {
 
     const { hours, minutes, totalMinutes } = parseTime(data.reservation_time);
 
-    const reservationTimeForDb = new Date(Date.UTC(1970, 0, 1, hours, minutes, 0, 0));
+    const reservationTimeForDb = new Date(
+      `1970-01-01T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00-05:00`
+    );
 
     if (!isAllowedTime(totalMinutes)) {
       throw new HttpError(
@@ -145,7 +175,7 @@ export const ReservationService = {
       );
     }
 
-    const dateToSearch = new Date(data.reservation_date);
+    const dateToSearch = parsePeruDate(data.reservation_date);
     const existingReservations = await prisma.reservation.findMany({
       where: {
         table_id: data.table_id,
@@ -180,7 +210,7 @@ export const ReservationService = {
       );
     }
 
-    return await prisma.reservation.create({
+    const newReservation = await prisma.reservation.create({
       data: {
         client_id: finalClientId,
         table_id: data.table_id,
@@ -195,10 +225,12 @@ export const ReservationService = {
         table: true,
       },
     });
+
+    return serializeReservation(newReservation);
   },
 
   async getAllReservations() {
-    return await prisma.reservation.findMany({
+    const reservations = await prisma.reservation.findMany({
       include: {
         client: {
           select: {
@@ -213,6 +245,8 @@ export const ReservationService = {
       },
       orderBy: [{ reservation_date: 'asc' }, { reservation_time: 'asc' }],
     });
+
+    return reservations.map(serializeReservation);
   },
 
   async updateStatus(id: number, status: string) {
@@ -232,10 +266,12 @@ export const ReservationService = {
     if (!reservationExistis)
       throw new HttpError(404, 'Reserva no encontrada', 'RESERVATION_NOT_FOUND');
 
-    return await prisma.reservation.update({
+    const updatedReservation = await prisma.reservation.update({
       where: { id },
       data: { status: status.toUpperCase() },
       include: { client: true, table: true },
     });
+
+    return serializeReservation(updatedReservation);
   },
 };
