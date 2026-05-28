@@ -5,7 +5,9 @@ import { logger } from '../utils/logger';
 export const PlateController = {
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const { name, description, price, category, image_url } = req.body;
+      const { name, description, price, category } = req.body;
+
+      const finalImageUrl = req.file ? req.file.path : req.body.image_url;
 
       if (!name || price === undefined || !category) {
         res.status(400).json({ error: 'Nombre, precio y categoria son requeridos' });
@@ -17,7 +19,7 @@ export const PlateController = {
         description,
         price,
         category,
-        image_url,
+        image_url: finalImageUrl,
       });
       res.status(201).json({
         message: 'El plato se ha creado correctamente',
@@ -66,14 +68,16 @@ export const PlateController = {
         return;
       }
 
-      const { name, description, price, category, image_url } = req.body;
+      const { name, description, price, category } = req.body;
+
+      const finalImageUrl = req.file ? req.file.path : req.body.image_url;
 
       const updatePlate = await PlateService.updatePlate(plateId, {
         name,
         description,
         price,
         category,
-        image_url,
+        image_url: finalImageUrl,
       });
       res.status(200).json({
         message: 'El plato se ha actualizado correctamente',

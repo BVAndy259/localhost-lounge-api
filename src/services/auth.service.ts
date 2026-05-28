@@ -47,14 +47,19 @@ export const AuthService = {
 
     if (!passwordValid) throw new HttpError(401, 'Credenciales inválidas', 'INVALID_CREDENTIALS');
 
-    const token = jwt.sign({ id: user.id, role: user.role }, env.JWT_SECRET, {
+    const isSuperAdmin = user.email === env.ADMIN_EMAIL;
+
+    const token = jwt.sign({ id: user.id, role: user.role, isSuperAdmin }, env.JWT_SECRET, {
       expiresIn: '8h',
     });
 
     const { password_hash: __user_password_hash, ...userData } = user;
     void __user_password_hash;
     return {
-      user: userData,
+      user: {
+        ...userData,
+        isSuperAdmin,
+      },
       token,
     };
   },

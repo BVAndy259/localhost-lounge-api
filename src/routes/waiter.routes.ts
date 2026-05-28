@@ -12,14 +12,33 @@ import {
 
 const router = Router();
 
-router.use(AuthMiddleware.verifyToken, RoleMiddleware.checkRole([Roles.ADMIN]));
+router.use(AuthMiddleware.verifyToken);
 
-router.post('/', validateBody(createWaiterSchema), WaiterController.create);
+router.get(
+  '/',
+  RoleMiddleware.checkRole([Roles.ADMIN, Roles.RECEPCIONISTA]),
+  WaiterController.getAll
+);
 
-router.get('/', WaiterController.getAll);
+router.post(
+  '/',
+  RoleMiddleware.checkRole([Roles.ADMIN]),
+  validateBody(createWaiterSchema),
+  WaiterController.create
+);
 
-router.put('/:id', validateBody(updateWaiterSchema), WaiterController.update);
+router.put(
+  '/:id',
+  RoleMiddleware.checkRole([Roles.ADMIN]),
+  validateBody(updateWaiterSchema),
+  WaiterController.update
+);
 
-router.patch('/:id/status', validateBody(toggleWaiterSchema), WaiterController.toggleStatus);
+router.patch(
+  '/:id/status',
+  RoleMiddleware.checkRole([Roles.ADMIN]),
+  validateBody(toggleWaiterSchema),
+  WaiterController.toggleStatus
+);
 
 export default router;
