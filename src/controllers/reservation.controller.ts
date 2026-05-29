@@ -3,7 +3,10 @@ import { AuthRequest } from '../middlewares/auth.middleware';
 import { ReservationService } from '../services/reservation.service';
 import { logger } from '../utils/logger';
 import HttpError from '../utils/httpError';
-import { createReservationSchema } from '../validators/reservation.validator';
+import {
+  assignReservationWaiterSchema,
+  createReservationSchema,
+} from '../validators/reservation.validator';
 
 export const ReservationController = {
   async create(req: AuthRequest, res: Response): Promise<void> {
@@ -86,6 +89,40 @@ export const ReservationController = {
       logger.error(`[RESERVATION ERROR] ChangeStatus: ${error?.message ?? error}`);
       if (error.message === 'Reserva no encontrada') res.status(404).json({ error: error.message });
       else res.status(400).json({ error: error.message });
+    }
+  },
+
+  async assignWaiter(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const reservationId = parseInt(req.params.id as string, 10);
+      if (isNaN(reservationId)) {
+        res.status(400).json({ error: 'Formato de ID de reserva no válido' });
+        return;
+      }
+
+      const parsed = assignReservationWaiterSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const issues = parsed.error.issues.map((i) => ({ path: i.path, message: i.message }));
+        res.status(400).json({ error: 'Payload inválido', details: issues });
+        return;
+      }
+
+      const updatedReservation = await ReservationService.assignWaiterToReservation(
+        reservationId,
+        parsed.data.waiter_id
+      );
+
+      res.status(200).json({
+        message: 'Mesero asignado correctamente a la reserva',
+        data: updatedReservation,
+      });
+    } catch (error: any) {
+      logger.error(`[RESERVATION ERROR] AssignWaiter: ${error?.message ?? error}`);
+      if (error instanceof HttpError) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(400).json({ error: error?.message ?? 'Error asignando mesero' });
+      }
     }
   },
 };

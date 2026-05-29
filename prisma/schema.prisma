@@ -27,6 +27,7 @@ model Waiter {
   id     Int     @id @default(autoincrement())
   name   String  @db.VarChar(100)
   active Boolean @default(true)
+  reservations Reservation[]
   tables Table[]
 
   @@map("waiters")
@@ -67,6 +68,7 @@ model Reservation {
   client_id        Int
   table_id         Int
   receptionist_id  Int?
+  waiter_id        Int?
   reservation_date DateTime @db.Date
   reservation_time DateTime @db.Time
   number_people    Int
@@ -78,6 +80,7 @@ model Reservation {
   client       Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
   table        Table  @relation(fields: [table_id], references: [id])
   receptionist User?  @relation(fields: [receptionist_id], references: [id], onDelete: SetNull)
+  waiter       Waiter? @relation(fields: [waiter_id], references: [id], onDelete: SetNull)
 
   @@map("reservations")
 }

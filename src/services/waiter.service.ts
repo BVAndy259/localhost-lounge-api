@@ -1,6 +1,26 @@
 import prisma from '../config/prisma';
 import HttpError from '../utils/httpError';
 
+const PERU_TIME_ZONE = 'America/Lima';
+
+const getPeruDateKey = (date: Date) =>
+  (() => {
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: PERU_TIME_ZONE,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(date);
+
+    const year = parts.find((part) => part.type === 'year')?.value ?? '1970';
+    const month = parts.find((part) => part.type === 'month')?.value ?? '01';
+    const day = parts.find((part) => part.type === 'day')?.value ?? '01';
+
+    return `${year}-${month}-${day}`;
+  })();
+
+const getPeruTodayKey = () => getPeruDateKey(new Date());
+
 export const WaiterService = {
   async createWaiter(name: string) {
     const existingWaiter = await prisma.waiter.findFirst({
@@ -18,8 +38,53 @@ export const WaiterService = {
   },
 
   async getAllWaiters() {
-    return await prisma.waiter.findMany({
+    const waiters = await prisma.waiter.findMany({
       orderBy: { id: 'asc' },
+      include: {
+        reservations: {
+          select: {
+            id: true,
+            reservation_date: true,
+            status: true,
+            table: {
+              select: {
+                id: true,
+                table_number: true,
+                status: true,
+                active: true,
+              },
+            },
+          },
+          where: {
+            status: {
+              in: ['PENDIENTE', 'CONFIRMADA', 'EN_CURSO'],
+            },
+          },
+          orderBy: [{ reservation_date: 'asc' }, { id: 'asc' }],
+        },
+      },
+    });
+
+    const todayKey = getPeruTodayKey();
+
+    return waiters.map((waiter) => {
+      const todayReservations = waiter.reservations.filter((reservation) => {
+        const reservationDate = getPeruDateKey(reservation.reservation_date);
+        return reservationDate === todayKey;
+      });
+
+      const todayTables = Array.from(
+        new Map(
+          todayReservations.map((reservation) => [reservation.table.id, reservation.table])
+        ).values()
+      );
+
+      return {
+        ...waiter,
+        tables: todayTables,
+        today_tables_count: todayTables.length,
+        is_busy_today: todayTables.length >= 3,
+      };
     });
   },
 

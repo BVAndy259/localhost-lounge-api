@@ -16,5 +16,6 @@ const staffOnly = [
 router.post('/', staffOnly, ReservationController.create);
 router.get('/', staffOnly, ReservationController.getAll);
 router.patch('/:id/status', staffOnly, ReservationController.changeStatus);
+router.patch('/:id/waiter', staffOnly, ReservationController.assignWaiter);
 
 export default router;

@@ -24,6 +24,10 @@ export const createReservationSchema = z.object({
     .optional(),
 });
 
+export const assignReservationWaiterSchema = z.object({
+  waiter_id: z.preprocess((val) => Number(val), z.number().int().positive()),
+});
+
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;
 
 export default createReservationSchema;
