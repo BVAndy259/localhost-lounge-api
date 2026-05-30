@@ -1,24 +1,85 @@
-async function callOllama(prompt: string) {
-  const response = await fetch('http://localhost:11434/api/generate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'llama3.2',
-      prompt: prompt,
-      format: 'json',
-      stream: false,
-      options: {
-        temperature: 0.2,
-      },
-    }),
-  });
+import { logger } from '../utils/logger';
 
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+async function callOpenRouter(prompt: string) {
+  // Usamos process.env directamente, que es la forma nativa de Node.js
+  const apiKey = process.env.OPENROUTER_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('OPENROUTER_API_KEY no está configurada en el archivo .env');
   }
 
-  const data = await response.json();
-  return JSON.parse(data.response);
+  const models = [
+    'deepseek/deepseek-v4-flash:free',
+    'google/gemma-4-31b-it:free',
+    'openai/gpt-oss-120b:free',
+  ];
+
+  let lastError: Error | null = null;
+
+  for (const model of models) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000);
+
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'HTTP-Referer': 'http://localhost:5173',
+          'X-Title': 'LocalHost Lounge',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [
+            {
+              role: 'system',
+              content:
+                'You are an API that ONLY outputs raw, valid JSON. Do not include markdown formatting like ```json. ONLY return the JSON object.',
+            },
+            {
+              role: 'user',
+              content: prompt,
+            },
+          ],
+          temperature: 0.2,
+          max_tokens: 1024,
+        }),
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        lastError = new Error(`OpenRouter HTTP error! status: ${response.status}, message: ${errorData}`);
+        logger.warn(`[OPENROUTER] Modelo ${model} falló, probando siguiente...`);
+        continue;
+      }
+
+      const data = await response.json();
+
+      if (!data.choices?.[0]?.message?.content) {
+        lastError = new Error('La IA no devolvió una respuesta válida.');
+        continue;
+      }
+
+      const rawText = data.choices[0].message.content.trim();
+
+      const cleaned = rawText.startsWith('```json')
+        ? rawText.replace(/^```json/, '').replace(/```$/, '').trim()
+        : rawText.startsWith('```')
+          ? rawText.replace(/^```/, '').replace(/```$/, '').trim()
+          : rawText;
+
+      return JSON.parse(cleaned);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      logger.warn(`[OPENROUTER] Modelo ${model} error: ${lastError.message}`);
+    }
+  }
+
+  throw lastError || new Error('Todos los modelos de IA fallaron.');
 }
 
 function formatHistory(history: { role: string; content: string }[]) {
@@ -26,6 +87,7 @@ function formatHistory(history: { role: string; content: string }[]) {
     ? history.map((h) => `${h.role === 'BOT' ? 'Assistant' : 'User'}: ${h.content}`).join('\n')
     : 'No previous history.';
 }
+
 export const AIService = {
   async processClientWebMessage(
     clientMessage: string,
@@ -77,9 +139,8 @@ export const AIService = {
         Client: "${clientMessage}"
       `;
 
-      return await callOllama(prompt);
+      return await callOpenRouter(prompt);
     } catch (error) {
-      const { logger } = await import('../utils/logger.js');
       logger.error('[IA ERROR] Copiloto Cliente falló:', error);
       return {
         action: 'HUMAN_INTERVENTION',
@@ -88,31 +149,69 @@ export const AIService = {
       };
     }
   },
+
   async processWorkerWebMessage(
     workerMessage: string,
-    history: { role: string; content: string }[]
+    history: { role: string; content: string }[],
+    userRole: string = 'RECEPCIONISTA'
   ) {
+    const isAdmin = userRole === 'ADMIN';
+
     try {
       const prompt = `
         You are the Internal Admin Copilot for "LocalHost Lounge" staff.
+        The current user role is: ${userRole}.
+        ${isAdmin ? 'You have FULL access to all administrative functions.' : 'You have access to reservations, tables, orders, and waiters. Administrative functions (plates, users) require ADMIN role.'}
         Analyze the Worker's command and return ONLY a valid JSON with "action", "reply", and "payload".
+
+        IMPORTANT:
+        - This is the private operational panel. You can help with navigation, reservations, tables, orders, waiters, plates, and user management.
+        - The frontend will ask for confirmation before executing any side effect.
+        - Never execute anything yourself. Only return the best action and the data required to perform it.
 
         SECURITY GUARDRAIL:
         - ONLY if the worker explicitly asks to solve math, write code, or talk about non-work trivia: use action "REPLY" and say "Esta interfaz está restringida a operaciones del restaurante."
         - Answer all work-related questions normally.
         - NEVER invent reservation or table data. Always use actions that return payload data from the database.
+        ${!isAdmin ? '- If the worker asks to create/edit plates or manage users, reply that they need ADMIN privileges.' : ''}
+
+        SLOT FILLING FOR CREATIONS:
+        When the worker asks to CREATE something, collect data step by step using "REPLY":
+        - If data is incomplete, use action "REPLY" and ask for the missing fields in Spanish.
+        - Only use CREATE_ action when ALL required data is present in the payload.
 
         Rules for "action" (Choose EXACTLY ONE):
-        - "REPLY": General internal questions, greetings, or declining strict off-topic.
+        - "REPLY": General internal questions, greetings, declining off-topic, or asking for missing creation data.
         - "SHOW_DASHBOARD": If the worker asks to see today's overview or general stats.
         - "RENDER_TABLE_STATUS": If the worker asks to see which tables are free/occupied right now.
         - "FIND_RESERVATION": If the worker wants to find a specific client's reservation.
+        - "SHOW_RESERVATIONS": If the worker asks to see all reservations or a list of reservations.
+        - "SHOW_ORDERS": If the worker asks to see orders.
+        - "SHOW_WAITERS": If the worker asks to see the waiter list.
+        - "NAVIGATE_PAGE": If the worker explicitly asks to open a page or section of the private panel.
+        - "CREATE_RESERVATION": ONLY when ALL required reservation data is collected.
+        - "CREATE_WAITER": ONLY when ALL required waiter data is collected.
+        ${isAdmin ? `- "CREATE_PLATE": ONLY when ALL required plate data is collected (ADMIN only).
+        - "CREATE_TABLE": ONLY when ALL required table data is collected (ADMIN only).
+        - "UPDATE_PLATE": If the worker asks to update a plate (ADMIN only).
+        - "UPDATE_TABLE": If the worker asks to update a table (ADMIN only).
+        - "MANAGE_USERS": If the worker asks to manage users (ADMIN only).` : ''}
 
         Rules for "payload":
         - If "FIND_RESERVATION", return {"search_term": string}.
+        - If "NAVIGATE_PAGE", return {"route": string, "label": string | null}.
+          Available routes: "/admin" (Dashboard), "/admin/reservas" (Reservations), "/admin/mesas" (Tables), "/admin/ordenes" (Orders), "/admin/meseros" (Waiters), "/admin/platos" (Plates - ADMIN only), "/admin/usuarios" (Users - ADMIN only), "/admin/chat" (Chat).
+        - If "CREATE_RESERVATION", return {"table_id": number | null, "table_number": string | null, "reservation_date": "YYYY-MM-DD", "reservation_time": "HH:mm", "number_people": number, "notes": string | null, "client_id": number | null, "client_data": {"name": string, "last_name": string, "phone_number": string, "email": string} | null }.
+        - If "CREATE_WAITER", return {"name": string, "phone_number": string | null}.
+        ${isAdmin ? `- If "CREATE_PLATE", return {"name": string, "price": number, "category": string, "description": string | null}.
+        - If "CREATE_TABLE", return {"table_number": string, "capacity": number, "type": string, "description": string | null} (type must be "VIP" or "ESTANDAR").
+        - If "UPDATE_PLATE", return {"id": number, "name": string | null, "price": number | null, "category": string | null, "description": string | null, "available": boolean | null}.
+        - If "UPDATE_TABLE", return {"id": number, "table_number": string | null, "capacity": number | null, "status": string | null, "type": string | null}.` : ''}
         - Otherwise, return {}.
 
         Reply Rule: DIRECT, PROFESSIONAL SPANISH. 
+        - If you propose creating something, reply with a short confirmation line showing the collected data, like "Listo: Mesero Jose Marquez, teléfono 987123432. ¿Confirmo la creación?".
+        - Navigation and show actions execute automatically without confirmation.
 
         Conversation History:
         ${formatHistory(history)}
@@ -120,9 +219,8 @@ export const AIService = {
         Worker: "${workerMessage}"
       `;
 
-      return await callOllama(prompt);
+      return await callOpenRouter(prompt);
     } catch (error) {
-      const { logger } = await import('../utils/logger.js');
       logger.error('[IA ERROR] Copiloto Trabajador falló:', error);
       return {
         action: 'REPLY',

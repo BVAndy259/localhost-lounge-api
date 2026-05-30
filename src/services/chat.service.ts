@@ -96,6 +96,96 @@ export const ChatService = {
         break;
       }
 
+      case 'SHOW_RESERVATIONS': {
+        const reservations = await prisma.reservation.findMany({
+          orderBy: { created_on: 'desc' },
+          take: 20,
+          include: { client: true, table: true },
+        });
+        aiResponse.payload.reservations = reservations;
+        if (reservations.length === 0) aiResponse.reply = 'No hay reservas registradas.';
+        break;
+      }
+
+      case 'SHOW_ORDERS': {
+        const orders = await prisma.order.findMany({
+          orderBy: { created_on: 'desc' },
+          take: 20,
+          include: { waiter: true, table: true },
+        });
+        aiResponse.payload.orders = orders;
+        if (orders.length === 0) aiResponse.reply = 'No hay órdenes registradas.';
+        break;
+      }
+
+      case 'SHOW_WAITERS': {
+        const waiters = await prisma.waiter.findMany({ orderBy: { name: 'asc' } });
+        aiResponse.payload.waiters = waiters;
+        if (waiters.length === 0) aiResponse.reply = 'No hay meseros registrados.';
+        break;
+      }
+
+      case 'CREATE_WAITER': {
+        const { name, phone_number } = aiResponse.payload;
+        const waiter = await prisma.waiter.create({
+          data: { name, phone_number: phone_number || null },
+        });
+        aiResponse.reply = `Mesero ${waiter.name} creado correctamente.`;
+        aiResponse.payload = { waiter };
+        break;
+      }
+
+      case 'CREATE_PLATE': {
+        if (userRole !== 'ADMIN') {
+          aiResponse.action = 'REPLY';
+          aiResponse.reply = 'No tienes permisos de administrador para crear platos.';
+          aiResponse.payload = {};
+          break;
+        }
+        const plate = await prisma.plate.create({
+          data: {
+            name: aiResponse.payload.name,
+            price: aiResponse.payload.price,
+            category: aiResponse.payload.category.toUpperCase(),
+            description: aiResponse.payload.description || null,
+          },
+        });
+        aiResponse.reply = `Plato ${plate.name} creado correctamente.`;
+        aiResponse.payload = { plate };
+        break;
+      }
+
+      case 'CREATE_TABLE': {
+        if (userRole !== 'ADMIN') {
+          aiResponse.action = 'REPLY';
+          aiResponse.reply = 'No tienes permisos de administrador para crear mesas.';
+          aiResponse.payload = {};
+          break;
+        }
+        const table = await prisma.table.create({
+          data: {
+            table_number: aiResponse.payload.table_number,
+            capacity: Number(aiResponse.payload.capacity),
+            type: aiResponse.payload.type?.toUpperCase() || 'ESTANDAR',
+            description: aiResponse.payload.description || '',
+          },
+        });
+        aiResponse.reply = `Mesa #${table.table_number} creada correctamente.`;
+        aiResponse.payload = { table };
+        break;
+      }
+
+      case 'UPDATE_PLATE':
+      case 'UPDATE_TABLE':
+      case 'MANAGE_USERS': {
+        if (userRole !== 'ADMIN') {
+          aiResponse.action = 'REPLY';
+          aiResponse.reply = 'No tienes permisos de administrador para realizar esa acción.';
+          aiResponse.payload = {};
+        }
+        break;
+      }
+
       case 'HUMAN_INTERVENTION': {
         if (clientId) {
           const activeReservation = await prisma.reservation.findFirst({

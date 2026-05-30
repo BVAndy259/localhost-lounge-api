@@ -37,7 +37,7 @@ export const ChatController = {
 
       let aiResponse;
       if (userRole === 'RECEPCIONISTA' || userRole === 'ADMIN') {
-        aiResponse = await AIService.processWorkerWebMessage(message, history);
+        aiResponse = await AIService.processWorkerWebMessage(message, history, userRole);
       } else {
         aiResponse = await AIService.processClientWebMessage(message, history);
       }

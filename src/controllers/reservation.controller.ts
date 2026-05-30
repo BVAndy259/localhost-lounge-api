@@ -7,6 +7,7 @@ import HttpError from '../utils/httpError';
 import {
   assignReservationWaiterSchema,
   createReservationSchema,
+  createPublicReservationSchema,
 } from '../validators/reservation.validator';
 
 export const ReservationController = {
@@ -49,6 +50,55 @@ export const ReservationController = {
       });
     } catch (error: any) {
       logger.error(`[RESERVATION ERROR] Create: ${error?.message ?? error}`);
+      if (error instanceof HttpError) {
+        res.status(error.statusCode).json({ error: error.message });
+      } else {
+        res.status(400).json({ error: error?.message ?? 'Error procesando la reserva' });
+      }
+    }
+  },
+
+  async createPublic(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const parsed = createPublicReservationSchema.safeParse(req.body);
+      if (!parsed.success) {
+        const issues = parsed.error.issues.map((i) => ({ path: i.path, message: i.message }));
+        res.status(400).json({ error: 'Payload inválido', details: issues });
+        return;
+      }
+
+      const { reservation_date, reservation_time, number_people, customer_name, customer_phone, notes } = parsed.data;
+
+      const table = await ReservationService.findAvailableTable(reservation_date, reservation_time, number_people);
+      if (!table) {
+        res.status(409).json({ error: 'No hay mesas disponibles para la fecha y hora seleccionadas' });
+        return;
+      }
+
+      const nameParts = customer_name.trim().split(/\s+/);
+      const firstName = nameParts[0] || customer_name;
+      const lastName = nameParts.slice(1).join(' ') || 'Cliente';
+
+      const newReservation = await ReservationService.createReservation({
+        table_id: table.id,
+        reservation_date,
+        reservation_time,
+        number_people,
+        notes,
+        client_data: {
+          name: firstName,
+          last_name: lastName,
+          phone_number: customer_phone,
+          email: `${customer_phone}@localhost.lounge`,
+        },
+      });
+
+      res.status(201).json({
+        message: 'Reserva creada correctamente',
+        data: newReservation,
+      });
+    } catch (error: any) {
+      logger.error(`[RESERVATION ERROR] CreatePublic: ${error?.message ?? error}`);
       if (error instanceof HttpError) {
         res.status(error.statusCode).json({ error: error.message });
       } else {
@@ -125,6 +175,37 @@ export const ReservationController = {
       } else {
         res.status(400).json({ error: error?.message ?? 'Error asignando mesero' });
       }
+    }
+  },
+
+  async getAvailableSlots(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { date, guests } = req.query;
+
+      if (!date || !guests) {
+        res.status(400).json({ error: 'Los parámetros date y guests son obligatorios' });
+        return;
+      }
+
+      const parsedDate = String(date);
+      const parsedGuests = parseInt(String(guests), 10);
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(parsedDate)) {
+        res.status(400).json({ error: 'La fecha debe tener formato YYYY-MM-DD' });
+        return;
+      }
+
+      if (isNaN(parsedGuests) || parsedGuests < 1) {
+        res.status(400).json({ error: 'El número de personas debe ser un entero positivo' });
+        return;
+      }
+
+      const slots = await ReservationService.getAvailableSlots(parsedDate, parsedGuests);
+
+      res.status(200).json({ data: slots });
+    } catch (error: any) {
+      logger.error(`[RESERVATION ERROR] getAvailableSlots: ${error?.message ?? error}`);
+      res.status(500).json({ error: 'Error interno del servidor' });
     }
   },
 };

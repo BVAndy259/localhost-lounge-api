@@ -693,4 +693,85 @@ export const ReservationService = {
 
     return serializeReservation(updatedReservation);
   },
+
+  async getAvailableSlots(date: string, guests: number) {
+    const dayStart = parsePeruDate(date);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+    const tables = await prisma.table.findMany({
+      where: { active: true, capacity: { gte: guests }, status: { not: 'OCUPADA' } },
+      select: { id: true, table_number: true, capacity: true, type: true, description: true, reservation_price: true },
+    });
+
+    if (!tables.length) return [];
+
+    const tableIds = tables.map((t) => t.id);
+
+    const existingReservations = await prisma.reservation.findMany({
+      where: {
+        table_id: { in: tableIds },
+        reservation_date: { gte: dayStart, lt: dayEnd },
+        status: { in: ['PENDIENTE', 'CONFIRMADA', 'EN_CURSO'] },
+      },
+      select: { table_id: true, reservation_time: true },
+    });
+
+    const OPEN = 18 * 60;
+    const CLOSE = 24 * 60 + 2 * 60;
+    const DURATION = 120;
+    const INTERVAL = 30;
+
+    const slots: { time: string; tables: typeof tables }[] = [];
+    for (let m = OPEN; m + DURATION <= CLOSE; m += INTERVAL) {
+      const availableTables = tables.filter((table) => {
+        const hasOverlap = existingReservations
+          .filter((r) => r.table_id === table.id)
+          .some((r) => {
+            const startMin = getPeruTimeMinutes(r.reservation_time);
+            return m < startMin + DURATION && startMin < m + DURATION;
+          });
+        return !hasOverlap;
+      });
+
+      if (availableTables.length > 0) {
+        const h = Math.floor(m / 60);
+        const min = m % 60;
+        const time = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+        slots.push({ time, tables: availableTables });
+      }
+    }
+
+    return slots;
+  },
+
+  async findAvailableTable(date: string, time: string, guests: number) {
+    const dayStart = parsePeruDate(date);
+    const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+    const { totalMinutes: timeMinutes } = parseTimeToMinutes(time);
+
+    const tables = await prisma.table.findMany({
+      where: { active: true, capacity: { gte: guests }, status: { not: 'OCUPADA' } },
+      orderBy: { capacity: 'asc' },
+    });
+
+    for (const table of tables) {
+      const existing = await prisma.reservation.findMany({
+        where: {
+          table_id: table.id,
+          reservation_date: { gte: dayStart, lt: dayEnd },
+          status: { in: ['PENDIENTE', 'CONFIRMADA', 'EN_CURSO'] },
+        },
+        select: { reservation_time: true },
+      });
+
+      const hasOverlap = existing.some((res) => {
+        const startMin = getPeruTimeMinutes(res.reservation_time);
+        return timeMinutes < startMin + 120 && startMin < timeMinutes + 120;
+      });
+
+      if (!hasOverlap) return table;
+    }
+
+    return null;
+  },
 };

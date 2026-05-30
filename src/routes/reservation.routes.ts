@@ -6,7 +6,8 @@ import { Roles } from '../constants/roles';
 
 const router = Router();
 
-router.post('/public', ReservationController.create);
+router.post('/public', ReservationController.createPublic);
+router.get('/available-slots', ReservationController.getAvailableSlots);
 
 const staffOnly = [
   AuthMiddleware.verifyToken,
