@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { ReservationService } from '../services/reservation.service';
+import { UserService } from '../services/user.service';
 import { logger } from '../utils/logger';
 import HttpError from '../utils/httpError';
 import {
@@ -28,11 +29,12 @@ export const ReservationController = {
         client_data,
       } = parsed.data;
 
-      const receptionist_id = req.user?.id;
+      const receptionistId = req.user?.id;
+      const receptionist = receptionistId ? await UserService.getUserById(receptionistId) : null;
 
       const newReservation = await ReservationService.createReservation({
         table_id: Number(table_id),
-        receptionist_id,
+        receptionist_id: receptionist?.id,
         reservation_date,
         reservation_time,
         number_people: Number(number_people),

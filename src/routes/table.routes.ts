@@ -17,6 +17,7 @@ const staffOnly = RoleMiddleware.checkRole([Roles.ADMIN, Roles.RECEPCIONISTA]);
 router.get('/public', TableController.getPublic);
 
 router.get('/', AuthMiddleware.verifyToken, staffOnly, TableController.getAll);
+router.get('/:id', AuthMiddleware.verifyToken, staffOnly, TableController.getById);
 
 router.post(
   '/',

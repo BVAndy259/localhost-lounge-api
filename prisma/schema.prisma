@@ -1,14 +1,20 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum OrderStatus {
+  PENDIENTE
+  PREPARANDO
+  LISTO
+  SERVIDO
+  PAGADO
 }
 
 model User {
@@ -24,11 +30,12 @@ model User {
 }
 
 model Waiter {
-  id     Int     @id @default(autoincrement())
-  name   String  @db.VarChar(100)
-  active Boolean @default(true)
+  id           Int           @id @default(autoincrement())
+  name         String        @db.VarChar(100)
+  active       Boolean       @default(true)
   reservations Reservation[]
-  tables Table[]
+  tables       Table[]
+  orders       Order[]
 
   @@map("waiters")
 }
@@ -42,23 +49,26 @@ model Client {
   total_reservations Int            @default(0)
   category           String         @default("NUEVO") @db.VarChar(20)
   reservations       Reservation[]
+  orders             Order[]
   chat_sessions      Chat_Session[]
 
   @@map("clients")
 }
 
 model Table {
-  id                Int           @id @default(autoincrement())
+  id                Int     @id @default(autoincrement())
   waiter_id         Int?
-  table_number      String        @unique @db.VarChar(20)
+  table_number      String  @unique @db.VarChar(20)
   capacity          Int
-  type              String        @db.VarChar(20)
-  reservation_price Decimal       @default(0.00) @db.Decimal(10, 2)
-  description       String        @db.Text()
-  active            Boolean       @default(true)
-  status            String        @default("LIBRE")
-  waiter            Waiter?       @relation(fields: [waiter_id], references: [id], onDelete: SetNull)
-  reservations      Reservation[]
+  type              String  @db.VarChar(20)
+  reservation_price Decimal @default(0.00) @db.Decimal(10, 2)
+  description       String  @db.Text()
+  active            Boolean @default(true)
+  status            String  @default("LIBRE")
+
+  waiter       Waiter?       @relation(fields: [waiter_id], references: [id], onDelete: SetNull)
+  reservations Reservation[]
+  orders       Order[]
 
   @@map("tables")
 }
@@ -77,9 +87,9 @@ model Reservation {
   created_on       DateTime @default(now())
   support_required Boolean  @default(false)
 
-  client       Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
-  table        Table  @relation(fields: [table_id], references: [id])
-  receptionist User?  @relation(fields: [receptionist_id], references: [id], onDelete: SetNull)
+  client       Client  @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  table        Table   @relation(fields: [table_id], references: [id])
+  receptionist User?   @relation(fields: [receptionist_id], references: [id], onDelete: SetNull)
   waiter       Waiter? @relation(fields: [waiter_id], references: [id], onDelete: SetNull)
 
   @@map("reservations")
@@ -93,6 +103,8 @@ model Plate {
   category    String  @db.VarChar(50)
   available   Boolean @default(true)
   image_url   String? @db.Text
+
+  order_items Order_Item[]
 
   @@map("plates")
 }
@@ -117,4 +129,50 @@ model Chat_Message {
   sesion     Chat_Session @relation(fields: [session_id], references: [id], onDelete: Cascade)
 
   @@map("chat_messages")
+}
+
+model Order {
+  id         Int         @id @default(autoincrement())
+  client_id  Int?
+  table_id   Int
+  waiter_id  Int
+  status     OrderStatus @default(PENDIENTE)
+  created_on DateTime    @default(now())
+  updated_on DateTime    @updatedAt
+
+  client  Client?      @relation(fields: [client_id], references: [id], onDelete: SetNull)
+  table   Table        @relation(fields: [table_id], references: [id])
+  waiter  Waiter       @relation(fields: [waiter_id], references: [id])
+  items   Order_Item[]
+  receipt Receipt?
+
+  @@map("orders")
+}
+
+model Order_Item {
+  id       Int     @id @default(autoincrement())
+  order_id Int
+  plate_id Int
+  quantity Int
+  price    Decimal @db.Decimal(10, 2)
+  notes    String? @db.Text
+
+  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  plate Plate @relation(fields: [plate_id], references: [id])
+
+  @@map("order_items")
+}
+
+model Receipt {
+  id               Int      @id @default(autoincrement())
+  order_id         Int      @unique
+  reservation_cost Decimal  @default(0.00) @db.Decimal(10, 2)
+  items_total      Decimal  @default(0.00) @db.Decimal(10, 2)
+  final_total      Decimal  @default(0.00) @db.Decimal(10, 2)
+  payment_method   String   @db.VarChar(50)
+  issued_at        DateTime @default(now())
+
+  order Order @relation(fields: [order_id], references: [id])
+
+  @@map("receipts")
 }

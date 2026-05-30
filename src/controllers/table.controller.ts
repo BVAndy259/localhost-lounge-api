@@ -67,6 +67,29 @@ export const TableController = {
     }
   },
 
+  async getById(req: Request, res: Response): Promise<void> {
+    try {
+      const tableId = parseInt(req.params.id as string, 10);
+      if (isNaN(tableId)) {
+        res.status(400).json({ error: 'Formato de ID de mesa no válido' });
+        return;
+      }
+
+      const table = await TableService.getTableById(tableId);
+      res.status(200).json({
+        message: 'Mesa recuperada correctamente',
+        data: table,
+      });
+    } catch (error: any) {
+      logger.error(`[TABLE ERROR] GetById: ${error?.message ?? error}`);
+      if (error.message === 'Mesa no encontrada') {
+        res.status(404).json({ error: error.message });
+      } else {
+        res.status(400).json({ error: error.message });
+      }
+    }
+  },
+
   async update(req: Request, res: Response): Promise<void> {
     try {
       const tableId = parseInt(req.params.id as string, 10);
@@ -119,10 +142,18 @@ export const TableController = {
         return;
       }
 
-      const allowedStatus = ['LIBRE', 'OCUPADO', 'RESERVADO'];
-      if (!allowedStatus.includes(status.toUpperCase())) {
+      const normalizedStatusMap: Record<string, string> = {
+        LIBRE: 'LIBRE',
+        OCUPADA: 'OCUPADA',
+        OCUPADO: 'OCUPADA',
+        RESERVADA: 'RESERVADA',
+        RESERVADO: 'RESERVADA',
+      };
+      const normalizedStatus = normalizedStatusMap[String(status).toUpperCase()];
+
+      if (!normalizedStatus) {
         res.status(400).json({
-          error: 'Estado no válido. Valores permitidos: LIBRE, OCUPADO, RESERVADO',
+          error: 'Estado no válido. Valores permitidos: LIBRE, OCUPADA, RESERVADA',
         });
         return;
       }
@@ -131,11 +162,11 @@ export const TableController = {
 
       const updateTable = await TableService.changeTableStatus(
         tableId,
-        status.toUpperCase(),
+        normalizedStatus,
         parseWaiterId
       );
       res.status(200).json({
-        message: `El estado de la mesa se ha actualizado a ${status.toUpperCase()}`,
+        message: `El estado de la mesa se ha actualizado a ${normalizedStatus}`,
         data: updateTable,
       });
     } catch (error: any) {

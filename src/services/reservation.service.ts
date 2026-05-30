@@ -32,6 +32,14 @@ const getPeruDateKey = (date: Date) =>
     return `${year}-${month}-${day}`;
   })();
 
+const getDateOnlyKey = (date: Date) =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+
 const getPeruTimeKey = (date: Date) =>
   new Intl.DateTimeFormat('en-GB', {
     timeZone: PERU_TIME_ZONE,
@@ -64,7 +72,7 @@ const getPeruNow = () => {
 };
 
 const getReservationWindow = (reservationDate: Date, reservationTime: Date) => {
-  const dateKey = getPeruDateKey(reservationDate);
+  const dateKey = getDateOnlyKey(reservationDate);
   const timeKey = getPeruTimeKey(reservationTime);
   const [hour, minute] = timeKey.split(':').map(Number);
 
@@ -152,7 +160,7 @@ export const buildWaiterRotation = async (
   const reservationsByDay = new Map<string, typeof reservations>();
 
   for (const reservation of reservations) {
-    const dayKey = getPeruDateKey(reservation.reservation_date);
+    const dayKey = getDateOnlyKey(reservation.reservation_date);
     const nextReservations = reservationsByDay.get(dayKey) ?? [];
     nextReservations.push(reservation);
     reservationsByDay.set(dayKey, nextReservations);
@@ -484,7 +492,7 @@ export const ReservationService = {
       data: {
         client_id: finalClientId,
         table_id: data.table_id,
-        receptionist_id: data.receptionist_id || null,
+        receptionist_id: data.receptionist_id ?? null,
         reservation_date: dateToSearch,
         reservation_time: reservationTimeForDb,
         number_people: data.number_people,
@@ -510,6 +518,7 @@ export const ReservationService = {
       include: {
         client: {
           select: {
+            id: true,
             name: true,
             last_name: true,
             email: true,
@@ -558,11 +567,27 @@ export const ReservationService = {
       );
     }
 
+    if (normalizedStatus === 'COMPLETADA') {
+      throw new HttpError(
+        400,
+        'La reserva se completa automáticamente al terminar su horario',
+        'MANUAL_COMPLETION_NOT_ALLOWED'
+      );
+    }
+
     const reservationExistis = await prisma.reservation.findUnique({
       where: { id },
     });
     if (!reservationExistis)
       throw new HttpError(404, 'Reserva no encontrada', 'RESERVATION_NOT_FOUND');
+
+    if (reservationExistis.status === 'COMPLETADA') {
+      throw new HttpError(
+        400,
+        'No se puede modificar el estado de una reserva ya completada',
+        'RESERVATION_COMPLETED'
+      );
+    }
 
     const updatedReservation = await prisma.reservation.update({
       where: { id },
@@ -596,7 +621,7 @@ export const ReservationService = {
       throw new HttpError(400, 'El mesero asignado no existe o está inactivo', 'WAITER_INVALID');
     }
 
-    const dayStart = parsePeruDate(getPeruDateKey(reservation.reservation_date));
+    const dayStart = parsePeruDate(getDateOnlyKey(reservation.reservation_date));
     const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
 
     const sameDayReservations = await prisma.reservation.findMany({

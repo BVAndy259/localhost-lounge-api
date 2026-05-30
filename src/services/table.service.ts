@@ -60,6 +60,7 @@ export const TableService = {
             },
             client: {
               select: {
+                id: true,
                 name: true,
                 last_name: true,
               },
@@ -121,6 +122,67 @@ export const TableService = {
         table_number: 'asc',
       },
     });
+  },
+
+  async getTableById(id: number) {
+    await syncReservationsAndTables();
+
+    const table = await prisma.table.findUnique({
+      where: { id },
+      include: {
+        waiter: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        reservations: {
+          select: {
+            id: true,
+            reservation_date: true,
+            reservation_time: true,
+            status: true,
+            waiter_id: true,
+            waiter: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+            client: {
+              select: {
+                id: true,
+                name: true,
+                last_name: true,
+              },
+            },
+          },
+          orderBy: [{ reservation_date: 'asc' }, { reservation_time: 'asc' }],
+        },
+      },
+    });
+
+    if (!table) {
+      throw new HttpError(404, 'Mesa no encontrada', 'TABLE_NOT_FOUND');
+    }
+
+    const waiterRotation = await buildWaiterRotation(
+      table.reservations.map((reservation) => ({
+        id: reservation.id,
+        table_id: table.id,
+        reservation_date: reservation.reservation_date,
+        reservation_time: reservation.reservation_time,
+        waiter_id: reservation.waiter_id,
+      }))
+    );
+
+    return {
+      ...table,
+      reservations: table.reservations.map((reservation) => ({
+        ...reservation,
+        assigned_waiter: reservation.waiter ?? waiterRotation.get(reservation.id) ?? null,
+      })),
+    };
   },
 
   async updateTable(
