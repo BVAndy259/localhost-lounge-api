@@ -32,6 +32,7 @@ model User {
 model Waiter {
   id           Int           @id @default(autoincrement())
   name         String        @db.VarChar(100)
+  phone_number String?       @db.VarChar(20)
   active       Boolean       @default(true)
   reservations Reservation[]
   tables       Table[]

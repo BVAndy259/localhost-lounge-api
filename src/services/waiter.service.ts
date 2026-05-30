@@ -22,7 +22,7 @@ const getPeruDateKey = (date: Date) =>
 const getPeruTodayKey = () => getPeruDateKey(new Date());
 
 export const WaiterService = {
-  async createWaiter(name: string) {
+  async createWaiter(name: string, phone_number?: string | null) {
     const existingWaiter = await prisma.waiter.findFirst({
       where: {
         name: { equals: name, mode: 'insensitive' },
@@ -32,9 +32,18 @@ export const WaiterService = {
     if (existingWaiter)
       throw new HttpError(409, 'Ya hay un mesero con ese nombre registrado', 'WAITER_EXISTS');
 
-    return await prisma.waiter.create({
-      data: { name },
-    });
+    // If Prisma client doesn't expose the new field yet at runtime, use raw SQL as fallback
+    if (phone_number) {
+      const rows: any = await prisma.$queryRaw`
+        INSERT INTO "waiters" (name, phone_number, active)
+        VALUES (${name}, ${phone_number}, true)
+        RETURNING *
+      `;
+
+      return rows[0] ?? null;
+    }
+
+    return await prisma.waiter.create({ data: { name } as any });
   },
 
   async getAllWaiters() {
@@ -88,15 +97,23 @@ export const WaiterService = {
     });
   },
 
-  async updateWaiter(id: number, name: string) {
+  async updateWaiter(id: number, name: string, phone_number?: string | null) {
     const waiterExists = await prisma.waiter.findUnique({ where: { id } });
     if (!waiterExists)
       throw new HttpError(404, 'No se ha encontrado el mesero', 'WAITER_NOT_FOUND');
 
-    return await prisma.waiter.update({
-      where: { id },
-      data: { name },
-    });
+    if (phone_number !== undefined) {
+      const rows: any = await prisma.$queryRaw`
+        UPDATE "waiters"
+        SET name = ${name}, phone_number = ${phone_number}
+        WHERE id = ${id}
+        RETURNING *
+      `;
+
+      return rows[0] ?? null;
+    }
+
+    return await prisma.waiter.update({ where: { id }, data: { name } as any });
   },
 
   async toggleWaiterStatus(id: number, active: boolean) {

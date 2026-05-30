@@ -1,2 +1,2 @@
--- DropIndex
-DROP INDEX "orders_client_id_idx";
+-- DropIndex (safe)
+DROP INDEX IF EXISTS "orders_client_id_idx";

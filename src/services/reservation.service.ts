@@ -1,5 +1,6 @@
 import prisma from '../config/prisma';
 import HttpError from '../utils/httpError';
+import { sendWaiterWhatsapp } from '../utils/notify';
 
 const PERU_TIME_ZONE = 'America/Lima';
 const RESERVATION_DURATION_MS = 120 * 60 * 1000;
@@ -129,10 +130,22 @@ const assignWaiterToTableIfNeeded = async (tableId: number) => {
     return;
   }
 
-  await prisma.table.update({
+  const updated = await prisma.table.update({
     where: { id: tableId },
     data: { waiter_id: autoWaiterId },
+    select: { id: true, table_number: true },
   });
+
+  // Notify waiter about table assignment (best-effort)
+  try {
+    await sendWaiterWhatsapp(
+      autoWaiterId,
+      `Se te asignó la mesa ${updated.table_number}. Revisa tus asignaciones en el sistema.`
+    );
+  } catch (err) {
+    // no bloquear el flujo si falla la notificación
+    console.warn('[notify] fallo al notificar asignación de mesa', err);
+  }
 };
 
 export const buildWaiterRotation = async (
@@ -313,10 +326,20 @@ export const syncReservationsAndTables = async () => {
 
       const assignedWaiter = waiterRotation.get(reservation.id);
       if (assignedWaiter) {
-        await prisma.reservation.update({
+        const updated = await prisma.reservation.update({
           where: { id: reservation.id },
           data: { waiter_id: assignedWaiter.id },
+          include: { table: { select: { table_number: true } } },
         });
+
+        try {
+          await sendWaiterWhatsapp(
+            assignedWaiter.id,
+            `Se te asignó la mesa ${updated.table.table_number} para una reserva. Revisa tus asignaciones.`
+          );
+        } catch (err) {
+          console.warn('[notify] fallo al notificar asignación de reserva', err);
+        }
       }
     })
   );
@@ -654,6 +677,17 @@ export const ReservationService = {
         waiter: { select: { id: true, name: true } },
       },
     });
+
+    try {
+      await sendWaiterWhatsapp(
+        waiterId,
+        `Te asignaron la mesa ${updatedReservation.table.table_number} para la reserva ${formatReservationDate(
+          updatedReservation.reservation_date as unknown as Date
+        )} ${formatReservationTime(updatedReservation.reservation_time as unknown as Date)}`
+      );
+    } catch (err) {
+      console.warn('[notify] fallo al notificar asignación manual', err);
+    }
 
     await syncReservationsAndTables();
 
