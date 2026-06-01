@@ -140,6 +140,7 @@ export const OrderService = {
             data.items && data.items.length > 0
               ? {
                   create: await (async () => {
+                    const items = data.items!;
                     const orderItems: {
                       plate_id: number;
                       quantity: number;
@@ -268,7 +269,7 @@ export const OrderService = {
         order_id,
         plate_id: item.plate_id,
         quantity: item.quantity,
-        price: plate.price,
+        price: Number(plate.price),
         notes: item.notes,
       };
     });

@@ -113,7 +113,7 @@ model Plate {
 model Chat_Session {
   id            Int            @id @default(autoincrement())
   session_token String         @unique @db.VarChar(255)
-  client_id     Int?
+  client_id     Int?           @unique
   created_on    DateTime       @default(now())
   client        Client?        @relation(fields: [client_id], references: [id], onDelete: SetNull)
   messages      Chat_Message[]
