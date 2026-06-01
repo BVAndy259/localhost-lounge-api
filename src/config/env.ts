@@ -13,6 +13,9 @@ export const env = {
   ADMIN_NAME: process.env.ADMIN_NAME as string,
   ADMIN_EMAIL: process.env.ADMIN_EMAIL as string,
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD as string,
+  TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
+  TWILIO_WHATSAPP_FROM: process.env.TWILIO_WHATSAPP_FROM,
 };
 
 if (!env.DATABASE_URL) {

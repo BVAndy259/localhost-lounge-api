@@ -1,5 +1,6 @@
 import prisma from '../config/prisma';
 import { ReservationService } from './reservation.service';
+import { notifyAllWaiters } from '../utils/notify';
 import { logger } from '../utils/logger';
 
 export const ChatService = {
@@ -205,6 +206,20 @@ export const ChatService = {
         });
         aiResponse.reply = `Mesa #${table.table_number} creada correctamente.`;
         aiResponse.payload = { table };
+        break;
+      }
+
+      case 'NOTIFY_WAITERS': {
+        const notifyResult = await notifyAllWaiters();
+        aiResponse.payload = notifyResult;
+        if (notifyResult.total === 0) {
+          aiResponse.reply = 'No hay meseros activos registrados.';
+        } else if (notifyResult.failed.length === 0) {
+          aiResponse.reply = `Notificación enviada a todos los meseros (${notifyResult.sent} mensajes).`;
+        } else {
+          const failedNames = notifyResult.failed.map((f) => f.name).join(', ');
+          aiResponse.reply = `Notificación enviada a ${notifyResult.sent} mesero(s). Falló con: ${failedNames}.`;
+        }
         break;
       }
 

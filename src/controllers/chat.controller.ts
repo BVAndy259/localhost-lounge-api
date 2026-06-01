@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { Request, Response } from 'express';
 import prisma from '../config/prisma';
 import { AIService } from '../services/ai.service';
@@ -9,28 +10,46 @@ export const ChatController = {
     try {
       const { sessionToken, clientId, message, role } = req.body;
 
-      if (!sessionToken || !message) {
-        return res.status(400).json({ error: 'Faltan datos obligatorios (sessionToken, message)' });
+      if (!message) {
+        return res.status(400).json({ error: 'Faltan datos obligatorios (message)' });
       }
 
       const userRole = role || 'CLIENTE';
 
-      let session = await prisma.chat_Session.findUnique({
-        where: { session_token: sessionToken },
-        include: { client: true },
-      });
-
-      if (!session) {
-        session = await prisma.chat_Session.create({
-          data: { session_token: sessionToken, client_id: clientId || null },
+      let session;
+      if (clientId) {
+        session = await prisma.chat_Session.findUnique({
+          where: { client_id: clientId },
           include: { client: true },
         });
+        if (!session) {
+          session = await prisma.chat_Session.create({
+            data: { session_token: randomUUID(), client_id: clientId },
+            include: { client: true },
+          });
+        }
+      } else {
+        if (!sessionToken) {
+          return res
+            .status(400)
+            .json({ error: 'Faltan datos obligatorios (sessionToken, message)' });
+        }
+        session = await prisma.chat_Session.findUnique({
+          where: { session_token: sessionToken },
+          include: { client: true },
+        });
+        if (!session) {
+          session = await prisma.chat_Session.create({
+            data: { session_token: sessionToken },
+            include: { client: true },
+          });
+        }
       }
 
       const historyRaw = await prisma.chat_Message.findMany({
         where: { session_id: session.id },
         orderBy: { created_on: 'desc' },
-        take: 6,
+        take: 20,
       });
       const history = historyRaw.reverse();
 
