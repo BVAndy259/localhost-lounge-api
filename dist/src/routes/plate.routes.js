@@ -1,0 +1,23 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const plate_controller_1 = require("../controllers/plate.controller");
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const role_middleware_1 = require("../middlewares/role.middleware");
+const roles_1 = require("../constants/roles");
+const validate_middleware_1 = __importDefault(require("../middlewares/validate.middleware"));
+const upload_middleware_1 = require("../validators/upload.middleware");
+const plate_validator_1 = require("../validators/plate.validator");
+const router = (0, express_1.Router)();
+const adminOnly = role_middleware_1.RoleMiddleware.checkRole([roles_1.Roles.ADMIN]);
+const staffOnly = role_middleware_1.RoleMiddleware.checkRole([roles_1.Roles.ADMIN, roles_1.Roles.RECEPCIONISTA]);
+router.get('/public', plate_controller_1.PlateController.getPublic);
+router.use(auth_middleware_1.AuthMiddleware.verifyToken);
+router.post('/', adminOnly, upload_middleware_1.uploadImage.single('image'), (0, validate_middleware_1.default)(plate_validator_1.createPlateSchema), plate_controller_1.PlateController.create);
+router.get('/', staffOnly, plate_controller_1.PlateController.getAll);
+router.put('/:id', adminOnly, upload_middleware_1.uploadImage.single('image'), (0, validate_middleware_1.default)(plate_validator_1.updatePlateSchema), plate_controller_1.PlateController.update);
+router.patch('/:id/status', adminOnly, (0, validate_middleware_1.default)(plate_validator_1.togglePlateSchema), plate_controller_1.PlateController.toggleStatus);
+exports.default = router;
