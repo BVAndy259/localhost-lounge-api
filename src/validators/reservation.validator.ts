@@ -29,6 +29,7 @@ export const assignReservationWaiterSchema = z.object({
 });
 
 export const createPublicReservationSchema = z.object({
+  table_id: z.preprocess((val) => Number(val), z.number().int().positive()),
   reservation_date: z.string().regex(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/, {
     message: 'La fecha debe tener formato YYYY-MM-DD',
   }),
@@ -37,8 +38,10 @@ export const createPublicReservationSchema = z.object({
   }),
   number_people: z.preprocess((val) => Number(val), z.number().int().positive()),
   customer_name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres' }),
+  customer_email: z.string().email({ message: 'El correo electrónico no es válido' }),
   customer_phone: z.string().min(7, { message: 'El teléfono debe tener al menos 7 dígitos' }),
   notes: z.string().optional(),
+  session_token: z.string().optional(), // <--- ACEPTAMOS EL TOKEN
 });
 
 export type CreateReservationInput = z.infer<typeof createReservationSchema>;

@@ -139,8 +139,15 @@ export const OrderService = {
           items:
             data.items && data.items.length > 0
               ? {
-                  create: await Promise.all(
-                    data.items.map(async (item) => {
+                  create: await (async () => {
+                    const orderItems: {
+                      plate_id: number;
+                      quantity: number;
+                      price: number;
+                      notes?: string;
+                    }[] = [];
+
+                    for (const item of data.items) {
                       const plate = await tx.plate.findUnique({ where: { id: item.plate_id } });
                       if (!plate) {
                         throw new HttpError(
@@ -157,14 +164,16 @@ export const OrderService = {
                         );
                       }
 
-                      return {
+                      orderItems.push({
                         plate_id: item.plate_id,
                         quantity: item.quantity,
                         price: plate.price,
                         notes: item.notes,
-                      };
-                    })
-                  ),
+                      });
+                    }
+
+                    return orderItems;
+                  })(),
                 }
               : undefined,
         },

@@ -360,6 +360,7 @@ export const ReservationService = {
       phone_number: string;
       email: string;
     };
+    status?: ReservationStatus;
   }) {
     const getCategory = (totalReservations: number) => {
       if (totalReservations >= 6) return 'VIP';
@@ -520,7 +521,7 @@ export const ReservationService = {
         reservation_time: reservationTimeForDb,
         number_people: data.number_people,
         notes: data.notes || '',
-        status: 'CONFIRMADA',
+        status: data.status ?? 'CONFIRMADA',
       },
       include: {
         client: true,
@@ -700,7 +701,14 @@ export const ReservationService = {
 
     const tables = await prisma.table.findMany({
       where: { active: true, capacity: { gte: guests }, status: { not: 'OCUPADA' } },
-      select: { id: true, table_number: true, capacity: true, type: true, description: true, reservation_price: true },
+      select: {
+        id: true,
+        table_number: true,
+        capacity: true,
+        type: true,
+        description: true,
+        reservation_price: true,
+      },
     });
 
     if (!tables.length) return [];

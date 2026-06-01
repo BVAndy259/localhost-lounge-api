@@ -27,6 +27,34 @@ export const ChatService = {
       }
     }
 
+    if (aiResponse.action === 'PREFILL_RESERVATION') {
+      const reservationDate = aiResponse.payload?.reservation_date;
+      const reservationTime = aiResponse.payload?.reservation_time;
+      const guests = Number(aiResponse.payload?.number_people);
+
+      if (reservationDate && reservationTime && Number.isFinite(guests)) {
+        const availableSlots = await ReservationService.getAvailableSlots(reservationDate, guests);
+
+        const matchingSlot = availableSlots.find((slot) => slot.time === reservationTime);
+
+        if (matchingSlot) {
+          aiResponse.payload = {
+            ...aiResponse.payload,
+            available_tables: matchingSlot.tables,
+          };
+          aiResponse.reply =
+            '¡Excelente! Tengo todos tus datos listos. Tengo estas mesas disponibles, elige una con clic o escríbeme el número.';
+        } else {
+          aiResponse.payload = {
+            ...aiResponse.payload,
+            available_tables: [],
+          };
+          aiResponse.reply =
+            '¡Excelente! Tengo todos tus datos listos. No encontré mesas disponibles para esa hora, prueba con otro horario o escríbeme otra fecha.';
+        }
+      }
+    }
+
     switch (aiResponse.action) {
       case 'SHOW_MENU': {
         const { category, plate_name } = aiResponse.payload;

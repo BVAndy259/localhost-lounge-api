@@ -4,6 +4,7 @@ import { ReservationService } from '../services/reservation.service';
 import { UserService } from '../services/user.service';
 import { logger } from '../utils/logger';
 import HttpError from '../utils/httpError';
+import prisma from '../config/prisma';
 import {
   assignReservationWaiterSchema,
   createReservationSchema,
@@ -67,31 +68,43 @@ export const ReservationController = {
         return;
       }
 
-      const { reservation_date, reservation_time, number_people, customer_name, customer_phone, notes } = parsed.data;
-
-      const table = await ReservationService.findAvailableTable(reservation_date, reservation_time, number_people);
-      if (!table) {
-        res.status(409).json({ error: 'No hay mesas disponibles para la fecha y hora seleccionadas' });
-        return;
-      }
+      const {
+        table_id,
+        reservation_date,
+        reservation_time,
+        number_people,
+        customer_name,
+        customer_email,
+        customer_phone,
+        notes,
+        session_token,
+      } = parsed.data;
 
       const nameParts = customer_name.trim().split(/\s+/);
       const firstName = nameParts[0] || customer_name;
       const lastName = nameParts.slice(1).join(' ') || 'Cliente';
 
       const newReservation = await ReservationService.createReservation({
-        table_id: table.id,
+        table_id: table_id,
         reservation_date,
         reservation_time,
         number_people,
         notes,
+        status: 'CONFIRMADA',
         client_data: {
           name: firstName,
           last_name: lastName,
           phone_number: customer_phone,
-          email: `${customer_phone}@localhost.lounge`,
+          email: customer_email,
         },
       });
+
+      if (session_token && newReservation.client_id) {
+        await prisma.chat_Session.updateMany({
+          where: { session_token: session_token },
+          data: { client_id: newReservation.client_id },
+        });
+      }
 
       res.status(201).json({
         message: 'Reserva creada correctamente',

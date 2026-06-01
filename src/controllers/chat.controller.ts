@@ -17,10 +17,13 @@ export const ChatController = {
 
       let session = await prisma.chat_Session.findUnique({
         where: { session_token: sessionToken },
+        include: { client: true },
       });
+
       if (!session) {
         session = await prisma.chat_Session.create({
           data: { session_token: sessionToken, client_id: clientId || null },
+          include: { client: true },
         });
       }
 
@@ -39,7 +42,7 @@ export const ChatController = {
       if (userRole === 'RECEPCIONISTA' || userRole === 'ADMIN') {
         aiResponse = await AIService.processWorkerWebMessage(message, history, userRole);
       } else {
-        aiResponse = await AIService.processClientWebMessage(message, history);
+        aiResponse = await AIService.processClientWebMessage(message, history, session?.client);
       }
 
       if (typeof aiResponse.payload === 'string') {
