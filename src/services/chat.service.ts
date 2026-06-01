@@ -14,7 +14,12 @@ export const ChatService = {
     const normalizedMessage = rawMessage.toLowerCase();
 
     if (isWorker && aiResponse.action === 'REPLY') {
-      if (normalizedMessage.includes('dashboard') || normalizedMessage.includes('resumen')) {
+      if (
+        normalizedMessage.includes('dashboard') ||
+        normalizedMessage.includes('resumen') ||
+        normalizedMessage.includes('reporte') ||
+        normalizedMessage.includes('reportes')
+      ) {
         aiResponse.action = 'SHOW_DASHBOARD';
         aiResponse.payload = {};
       } else if (normalizedMessage.match(/reserva/)) {
@@ -24,6 +29,34 @@ export const ChatService = {
       } else if (normalizedMessage.match(/mesa/)) {
         aiResponse.action = 'RENDER_TABLE_STATUS';
         aiResponse.payload = {};
+      }
+    }
+
+    if (aiResponse.action === 'PREFILL_RESERVATION') {
+      const reservationDate = aiResponse.payload?.reservation_date;
+      const reservationTime = aiResponse.payload?.reservation_time;
+      const guests = Number(aiResponse.payload?.number_people);
+
+      if (reservationDate && reservationTime && Number.isFinite(guests)) {
+        const availableSlots = await ReservationService.getAvailableSlots(reservationDate, guests);
+
+        const matchingSlot = availableSlots.find((slot) => slot.time === reservationTime);
+
+        if (matchingSlot) {
+          aiResponse.payload = {
+            ...aiResponse.payload,
+            available_tables: matchingSlot.tables,
+          };
+          aiResponse.reply =
+            '¡Excelente! Tengo todos tus datos listos. Tengo estas mesas disponibles, elige una con clic o escríbeme el número.';
+        } else {
+          aiResponse.payload = {
+            ...aiResponse.payload,
+            available_tables: [],
+          };
+          aiResponse.reply =
+            '¡Excelente! Tengo todos tus datos listos. No encontré mesas disponibles para esa hora, prueba con otro horario o escríbeme otra fecha.';
+        }
       }
     }
 
@@ -93,6 +126,96 @@ export const ChatService = {
           orderBy: { table_number: 'asc' },
           include: { waiter: true },
         });
+        break;
+      }
+
+      case 'SHOW_RESERVATIONS': {
+        const reservations = await prisma.reservation.findMany({
+          orderBy: { created_on: 'desc' },
+          take: 20,
+          include: { client: true, table: true },
+        });
+        aiResponse.payload.reservations = reservations;
+        if (reservations.length === 0) aiResponse.reply = 'No hay reservas registradas.';
+        break;
+      }
+
+      case 'SHOW_ORDERS': {
+        const orders = await prisma.order.findMany({
+          orderBy: { created_on: 'desc' },
+          take: 20,
+          include: { waiter: true, table: true },
+        });
+        aiResponse.payload.orders = orders;
+        if (orders.length === 0) aiResponse.reply = 'No hay órdenes registradas.';
+        break;
+      }
+
+      case 'SHOW_WAITERS': {
+        const waiters = await prisma.waiter.findMany({ orderBy: { name: 'asc' } });
+        aiResponse.payload.waiters = waiters;
+        if (waiters.length === 0) aiResponse.reply = 'No hay meseros registrados.';
+        break;
+      }
+
+      case 'CREATE_WAITER': {
+        const { name, phone_number } = aiResponse.payload;
+        const waiter = await prisma.waiter.create({
+          data: { name, phone_number: phone_number || null },
+        });
+        aiResponse.reply = `Mesero ${waiter.name} creado correctamente.`;
+        aiResponse.payload = { waiter };
+        break;
+      }
+
+      case 'CREATE_PLATE': {
+        if (userRole !== 'ADMIN') {
+          aiResponse.action = 'REPLY';
+          aiResponse.reply = 'No tienes permisos de administrador para crear platos.';
+          aiResponse.payload = {};
+          break;
+        }
+        const plate = await prisma.plate.create({
+          data: {
+            name: aiResponse.payload.name,
+            price: aiResponse.payload.price,
+            category: aiResponse.payload.category.toUpperCase(),
+            description: aiResponse.payload.description || null,
+          },
+        });
+        aiResponse.reply = `Plato ${plate.name} creado correctamente.`;
+        aiResponse.payload = { plate };
+        break;
+      }
+
+      case 'CREATE_TABLE': {
+        if (userRole !== 'ADMIN') {
+          aiResponse.action = 'REPLY';
+          aiResponse.reply = 'No tienes permisos de administrador para crear mesas.';
+          aiResponse.payload = {};
+          break;
+        }
+        const table = await prisma.table.create({
+          data: {
+            table_number: aiResponse.payload.table_number,
+            capacity: Number(aiResponse.payload.capacity),
+            type: aiResponse.payload.type?.toUpperCase() || 'ESTANDAR',
+            description: aiResponse.payload.description || '',
+          },
+        });
+        aiResponse.reply = `Mesa #${table.table_number} creada correctamente.`;
+        aiResponse.payload = { table };
+        break;
+      }
+
+      case 'UPDATE_PLATE':
+      case 'UPDATE_TABLE':
+      case 'MANAGE_USERS': {
+        if (userRole !== 'ADMIN') {
+          aiResponse.action = 'REPLY';
+          aiResponse.reply = 'No tienes permisos de administrador para realizar esa acción.';
+          aiResponse.payload = {};
+        }
         break;
       }
 

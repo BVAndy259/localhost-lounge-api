@@ -5,14 +5,14 @@ import { logger } from '../utils/logger';
 export const WaiterController = {
   async create(req: Request, res: Response): Promise<void> {
     try {
-      const { name } = req.body;
+      const { name, phone_number } = req.body;
 
       if (!name) {
         res.status(400).json({ error: 'Es obligatorio indicar el nombre del mesero' });
         return;
       }
 
-      const newWaiter = await WaiterService.createWaiter(name);
+      const newWaiter = await WaiterService.createWaiter(name, phone_number);
       res.status(201).json({
         message: 'El mesero se ha creado correctamente',
         data: newWaiter,
@@ -44,7 +44,7 @@ export const WaiterController = {
         return;
       }
 
-      const { name } = req.body;
+      const { name, phone_number } = req.body;
       if (!name) {
         res.status(400).json({
           error: 'Es necesario indicar el nombre del mesero para realizar la actualización',
@@ -52,7 +52,7 @@ export const WaiterController = {
         return;
       }
 
-      const updatedWaiter = await WaiterService.updateWaiter(waiterId, name);
+      const updatedWaiter = await WaiterService.updateWaiter(waiterId, name, phone_number);
       res.status(200).json({
         message: 'El mesero se ha actualizado correctamente',
         data: updatedWaiter,

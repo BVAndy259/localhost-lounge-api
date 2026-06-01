@@ -6,7 +6,8 @@ import { Roles } from '../constants/roles';
 
 const router = Router();
 
-router.post('/public', ReservationController.create);
+router.post('/public', ReservationController.createPublic);
+router.get('/available-slots', ReservationController.getAvailableSlots);
 
 const staffOnly = [
   AuthMiddleware.verifyToken,
@@ -16,5 +17,6 @@ const staffOnly = [
 router.post('/', staffOnly, ReservationController.create);
 router.get('/', staffOnly, ReservationController.getAll);
 router.patch('/:id/status', staffOnly, ReservationController.changeStatus);
+router.patch('/:id/waiter', staffOnly, ReservationController.assignWaiter);
 
 export default router;
