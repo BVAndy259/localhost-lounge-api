@@ -5,6 +5,7 @@ dotenv.config();
 export const env = {
   PORT: process.env.PORT || 3000,
   DATABASE_URL: process.env.DATABASE_URL as string,
+  DIRECT_URL: process.env.DIRECT_URL as string,
   JWT_SECRET: process.env.JWT_SECRET as string,
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME as string,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY as string,
@@ -15,7 +16,7 @@ export const env = {
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD as string,
 };
 
-if (!env.DATABASE_URL) {
+if (!env.DATABASE_URL || !env.DIRECT_URL) {
   throw new Error('[ENV ERROR] Falta la variable DATABASE_URL en el archivo .env');
 }
 
