@@ -52,5 +52,5 @@ if (!exports.env.CLOUDINARY_CLOUD_NAME || !exports.env.CLOUDINARY_API_KEY || !ex
     throw new Error('[ENV ERROR] Faltan credenciales de Cloudinary en el archivo .env');
 }
 if (!exports.env.OPENROUTER_API_KEY) {
-    throw new Error('[ENV ERROR] Falata la API KEY de Open Router en el archivo .env');
+    throw new Error('[ENV ERROR] Faltan la API KEY de Open Router en el archivo .env');
 }
