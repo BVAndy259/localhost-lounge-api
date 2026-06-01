@@ -14,7 +14,12 @@ export const ChatService = {
     const normalizedMessage = rawMessage.toLowerCase();
 
     if (isWorker && aiResponse.action === 'REPLY') {
-      if (normalizedMessage.includes('dashboard') || normalizedMessage.includes('resumen')) {
+      if (
+        normalizedMessage.includes('dashboard') ||
+        normalizedMessage.includes('resumen') ||
+        normalizedMessage.includes('reporte') ||
+        normalizedMessage.includes('reportes')
+      ) {
         aiResponse.action = 'SHOW_DASHBOARD';
         aiResponse.payload = {};
       } else if (normalizedMessage.match(/reserva/)) {

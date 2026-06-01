@@ -158,28 +158,44 @@ export const AIService = {
     history: { role: string; content: string }[],
     userRole: string = 'RECEPCIONISTA'
   ) {
-    const isAdmin = userRole === 'ADMIN';
     try {
       const prompt = `
         You are the Internal Admin Copilot for "LocalHost Lounge" staff.
         The current user role is: ${userRole}.
-        ${isAdmin ? 'You have FULL access to all administrative functions.' : 'You have access to reservations, tables, orders, and waiters. Administrative functions (plates, users) require ADMIN role.'}
         
         Analyze the Worker's command and return ONLY a valid JSON with "action", "reply", and "payload".
 
+        SECURITY & PERMISSIONS (STRICT):
+        - YOU CANNOT create Reservations, Users, or Orders. If the worker asks you to create any of these, use action "REPLY" and gently tell them: "No tengo permisos para crear reservas, usuarios u órdenes por este medio. Por favor, utiliza el panel de navegación manual."
+        - If they want to CREATE a Waiter (Mesero), Table (Mesa), or Plate (Plato), you must ask for the missing data step-by-step using action "REPLY".
+        - If the worker asks for dashboard, reportes, resumen or KPI de hoy, use action "SHOW_DASHBOARD" and only summarize data that exists in the payload returned by backend.
+
+        CREATION RULES (Step-by-step):
+        1. CREATE WAITER: Needs [name, last_name].
+        2. CREATE TABLE: Needs [table_number, capacity, type (only NORMAL or VIP)].
+        3. CREATE PLATE: Needs [name, description, price, category].
+        * Once you have all the required data for the specific creation task, use the corresponding action below.
+
         Rules for "action" (Choose EXACTLY ONE):
-        - "REPLY": General internal questions, greetings, declining off-topic.
-        - "SHOW_DASHBOARD": If the worker asks to see today's overview.
+        - "REPLY": General questions, declining forbidden creations, or ASKING FOR MISSING DATA.
+        - "SHOW_DASHBOARD": If the worker asks to see today's overview, dashboard, reportes or resumen.
         - "RENDER_TABLE_STATUS": If the worker asks to see which tables are free/occupied.
         - "FIND_RESERVATION": If the worker wants to find a specific client's reservation.
         - "NAVIGATE_PAGE": If the worker explicitly asks to open a page.
+        - "CREATE_WAITER": When all waiter data is collected.
+        - "CREATE_TABLE": When all table data is collected.
+        - "CREATE_PLATE": When all plate data is collected.
         
         Rules for "payload":
-        - If "FIND_RESERVATION", return {"search_term": string}.
-        - If "NAVIGATE_PAGE", return {"route": string, "label": string | null}.
+        - For CREATE_WAITER: {"name": string, "last_name": string}
+        - For CREATE_TABLE: {"table_number": string, "capacity": number, "type": "NORMAL" | "VIP"}
+        - For CREATE_PLATE: {"name": string, "description": string, "price": number, "category": string}
+        - For NAVIGATE_PAGE: {"route": string, "label": string | null}
+        - For FIND_RESERVATION: {"search_term": string}
         - Otherwise, return {}.
 
         Reply Rule: DIRECT, PROFESSIONAL SPANISH. 
+        - If firing a CREATE action, reply with: "Datos completos. Por favor, confirma la creación en los botones de abajo."
 
         Conversation History:
         ${formatHistory(history)}
@@ -192,8 +208,7 @@ export const AIService = {
       logger.error('[IA ERROR] Copiloto Trabajador falló:', error);
       return {
         action: 'REPLY',
-        reply:
-          'Error interno del motor de IA. Por favor, utiliza los menús de navegación manuales de la izquierda.',
+        reply: 'Error interno del motor de IA. Por favor, utiliza los menús manuales.',
         payload: {},
       };
     }

@@ -13,26 +13,31 @@ import {
 
 const router = Router();
 
+const adminOnly = RoleMiddleware.checkRole([Roles.ADMIN]);
+const staffOnly = RoleMiddleware.checkRole([Roles.ADMIN, Roles.RECEPCIONISTA]);
+
 router.get('/public', PlateController.getPublic);
 
-router.use(AuthMiddleware.verifyToken, RoleMiddleware.checkRole([Roles.ADMIN]));
+router.use(AuthMiddleware.verifyToken);
 
 router.post(
   '/',
+  adminOnly,
   uploadImage.single('image'),
   validateBody(createPlateSchema),
   PlateController.create
 );
 
-router.get('/', PlateController.getAll);
+router.get('/', staffOnly, PlateController.getAll);
 
 router.put(
   '/:id',
+  adminOnly,
   uploadImage.single('image'),
   validateBody(updatePlateSchema),
   PlateController.update
 );
 
-router.patch('/:id/status', validateBody(togglePlateSchema), PlateController.toggleStatus);
+router.patch('/:id/status', adminOnly, validateBody(togglePlateSchema), PlateController.toggleStatus);
 
 export default router;
