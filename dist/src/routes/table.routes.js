@@ -1,0 +1,23 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const table_controller_1 = require("../controllers/table.controller");
+const auth_middleware_1 = require("../middlewares/auth.middleware");
+const role_middleware_1 = require("../middlewares/role.middleware");
+const roles_1 = require("../constants/roles");
+const validate_middleware_1 = __importDefault(require("../middlewares/validate.middleware"));
+const table_validator_1 = require("../validators/table.validator");
+const router = (0, express_1.Router)();
+const onlyAdmin = role_middleware_1.RoleMiddleware.checkRole([roles_1.Roles.ADMIN]);
+const staffOnly = role_middleware_1.RoleMiddleware.checkRole([roles_1.Roles.ADMIN, roles_1.Roles.RECEPCIONISTA]);
+router.get('/public', table_controller_1.TableController.getPublic);
+router.get('/', auth_middleware_1.AuthMiddleware.verifyToken, staffOnly, table_controller_1.TableController.getAll);
+router.get('/:id', auth_middleware_1.AuthMiddleware.verifyToken, staffOnly, table_controller_1.TableController.getById);
+router.post('/', auth_middleware_1.AuthMiddleware.verifyToken, onlyAdmin, (0, validate_middleware_1.default)(table_validator_1.createTableSchema), table_controller_1.TableController.create);
+router.put('/:id', auth_middleware_1.AuthMiddleware.verifyToken, onlyAdmin, (0, validate_middleware_1.default)(table_validator_1.updateTableSchema), table_controller_1.TableController.update);
+router.patch('/:id/status', auth_middleware_1.AuthMiddleware.verifyToken, staffOnly, table_controller_1.TableController.changeStatus);
+router.patch('/:id/active', auth_middleware_1.AuthMiddleware.verifyToken, onlyAdmin, (0, validate_middleware_1.default)(table_validator_1.toggleActiveSchema), table_controller_1.TableController.toggleActive);
+exports.default = router;

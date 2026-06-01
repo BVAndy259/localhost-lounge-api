@@ -148,7 +148,7 @@ export const OrderService = {
                       notes?: string;
                     }[] = [];
 
-                    for (const item of items) {
+                    for (const item of data.items || []) {
                       const plate = await tx.plate.findUnique({ where: { id: item.plate_id } });
                       if (!plate) {
                         throw new HttpError(

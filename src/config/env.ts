@@ -5,6 +5,7 @@ dotenv.config();
 export const env = {
   PORT: process.env.PORT || 3000,
   DATABASE_URL: process.env.DATABASE_URL as string,
+  DIRECT_URL: process.env.DIRECT_URL as string,
   JWT_SECRET: process.env.JWT_SECRET as string,
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME as string,
   CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY as string,
@@ -18,7 +19,7 @@ export const env = {
   TWILIO_WHATSAPP_FROM: process.env.TWILIO_WHATSAPP_FROM,
 };
 
-if (!env.DATABASE_URL) {
+if (!env.DATABASE_URL || !env.DIRECT_URL) {
   throw new Error('[ENV ERROR] Falta la variable DATABASE_URL en el archivo .env');
 }
 
@@ -35,5 +36,5 @@ if (!env.CLOUDINARY_CLOUD_NAME || !env.CLOUDINARY_API_KEY || !env.CLOUDINARY_API
 }
 
 if (!env.OPENROUTER_API_KEY) {
-  throw new Error('[ENV ERROR] Falata la API KEY de Open Router en el archivo .env');
+  throw new Error('[ENV ERROR] Faltan la API KEY de Open Router en el archivo .env');
 }

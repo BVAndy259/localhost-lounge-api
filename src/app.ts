@@ -13,7 +13,12 @@ import errorHandler from './middlewares/error.middleware';
 
 const app: Application = express();
 
-app.use(cors());
+const corsOptions = {
+  origin: ['http://localhost:5173', 'https://tu-frontend-vercel.app'],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 app.set('etag', false);
 app.use((req, res, next) => {
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
