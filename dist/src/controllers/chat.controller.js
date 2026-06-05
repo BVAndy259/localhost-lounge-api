@@ -4,6 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatController = void 0;
+const crypto_1 = require("crypto");
 const prisma_1 = __importDefault(require("../config/prisma"));
 const ai_service_1 = require("../services/ai.service");
 const chat_service_1 = require("../services/chat.service");
@@ -12,24 +13,44 @@ exports.ChatController = {
     async handleWebMessage(req, res) {
         try {
             const { sessionToken, clientId, message, role } = req.body;
-            if (!sessionToken || !message) {
-                return res.status(400).json({ error: 'Faltan datos obligatorios (sessionToken, message)' });
+            if (!message) {
+                return res.status(400).json({ error: 'Faltan datos obligatorios (message)' });
             }
             const userRole = role || 'CLIENTE';
-            let session = await prisma_1.default.chat_Session.findUnique({
-                where: { session_token: sessionToken },
-                include: { client: true },
-            });
-            if (!session) {
-                session = await prisma_1.default.chat_Session.create({
-                    data: { session_token: sessionToken, client_id: clientId || null },
+            let session;
+            if (clientId) {
+                session = await prisma_1.default.chat_Session.findUnique({
+                    where: { client_id: clientId },
                     include: { client: true },
                 });
+                if (!session) {
+                    session = await prisma_1.default.chat_Session.create({
+                        data: { session_token: (0, crypto_1.randomUUID)(), client_id: clientId },
+                        include: { client: true },
+                    });
+                }
+            }
+            else {
+                if (!sessionToken) {
+                    return res
+                        .status(400)
+                        .json({ error: 'Faltan datos obligatorios (sessionToken, message)' });
+                }
+                session = await prisma_1.default.chat_Session.findUnique({
+                    where: { session_token: sessionToken },
+                    include: { client: true },
+                });
+                if (!session) {
+                    session = await prisma_1.default.chat_Session.create({
+                        data: { session_token: sessionToken },
+                        include: { client: true },
+                    });
+                }
             }
             const historyRaw = await prisma_1.default.chat_Message.findMany({
                 where: { session_id: session.id },
                 orderBy: { created_on: 'desc' },
-                take: 6,
+                take: 20,
             });
             const history = historyRaw.reverse();
             await prisma_1.default.chat_Message.create({

@@ -38,6 +38,9 @@ exports.env = {
     ADMIN_NAME: process.env.ADMIN_NAME,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
     ADMIN_PASSWORD: process.env.ADMIN_PASSWORD,
+    TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
+    TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
+    TWILIO_WHATSAPP_FROM: process.env.TWILIO_WHATSAPP_FROM,
 };
 if (!exports.env.DATABASE_URL || !exports.env.DIRECT_URL) {
     throw new Error('[ENV ERROR] Falta la variable DATABASE_URL en el archivo .env');

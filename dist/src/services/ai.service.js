@@ -146,7 +146,7 @@ exports.AIService = {
         - If the worker asks for dashboard, reportes, resumen or KPI de hoy, use action "SHOW_DASHBOARD" and only summarize data that exists in the payload returned by backend.
 
         CREATION RULES (Step-by-step):
-        1. CREATE WAITER: Needs [name, last_name].
+        1. CREATE WAITER: Needs [name, phone_number (opcional)].
         2. CREATE TABLE: Needs [table_number, capacity, type (only NORMAL or VIP)].
         3. CREATE PLATE: Needs [name, description, price, category].
         * Once you have all the required data for the specific creation task, use the corresponding action below.
@@ -156,16 +156,20 @@ exports.AIService = {
         - "SHOW_DASHBOARD": If the worker asks to see today's overview, dashboard, reportes or resumen.
         - "RENDER_TABLE_STATUS": If the worker asks to see which tables are free/occupied.
         - "FIND_RESERVATION": If the worker wants to find a specific client's reservation.
-        - "NAVIGATE_PAGE": If the worker explicitly asks to open a page.
+        - "SHOW_RESERVATIONS": If the worker asks to see all reservations.
+        - "SHOW_ORDERS": If the worker asks to see all orders.
+        - "SHOW_WAITERS": If the worker asks to see all waiters/meseros.
+        - "SHOW_MENU": If the worker asks to see the menu/platos/carta.
+        - "NAVIGATE_PAGE": Only if the worker explicitly asks to open a specific admin page by name (e.g., "abrir dashboard"). Prefer SHOW_* actions above instead.
         - "CREATE_WAITER": When all waiter data is collected.
         - "CREATE_TABLE": When all table data is collected.
         - "CREATE_PLATE": When all plate data is collected.
         
         Rules for "payload":
-        - For CREATE_WAITER: {"name": string, "last_name": string}
+        - For CREATE_WAITER: {"name": string, "phone_number": string | null}
         - For CREATE_TABLE: {"table_number": string, "capacity": number, "type": "NORMAL" | "VIP"}
         - For CREATE_PLATE: {"name": string, "description": string, "price": number, "category": string}
-        - For NAVIGATE_PAGE: {"route": string, "label": string | null}
+        - For NAVIGATE_PAGE: {"route": string, "label": string | null} — ONLY use admin routes like "/admin/reservas", "/admin/ordenes", "/admin/mesas", "/admin/meseros", "/admin/platos", "/admin/usuarios".
         - For FIND_RESERVATION: {"search_term": string}
         - Otherwise, return {}.
 

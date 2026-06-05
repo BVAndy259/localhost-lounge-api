@@ -16,7 +16,11 @@ const order_routes_1 = __importDefault(require("./routes/order.routes"));
 const logger_middleware_1 = __importDefault(require("./middlewares/logger.middleware"));
 const error_middleware_1 = __importDefault(require("./middlewares/error.middleware"));
 const app = (0, express_1.default)();
-app.use((0, cors_1.default)());
+const corsOptions = {
+    origin: ['http://localhost:5173', 'https://tu-frontend-vercel.app'],
+    credentials: true,
+};
+app.use((0, cors_1.default)(corsOptions));
 app.set('etag', false);
 app.use((req, res, next) => {
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
