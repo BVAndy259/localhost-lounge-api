@@ -118,6 +118,7 @@ exports.OrderService = {
                     items: data.items && data.items.length > 0
                         ? {
                             create: await (async () => {
+                                const items = data.items;
                                 const orderItems = [];
                                 for (const item of data.items || []) {
                                     const plate = await tx.plate.findUnique({ where: { id: item.plate_id } });
@@ -208,7 +209,7 @@ exports.OrderService = {
                 order_id,
                 plate_id: item.plate_id,
                 quantity: item.quantity,
-                price: plate.price,
+                price: Number(plate.price),
                 notes: item.notes,
             };
         });

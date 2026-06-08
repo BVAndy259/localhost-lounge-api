@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatService = void 0;
 const prisma_1 = __importDefault(require("../config/prisma"));
 const reservation_service_1 = require("./reservation.service");
+const notify_1 = require("../utils/notify");
 const logger_1 = require("../utils/logger");
 exports.ChatService = {
     async executeAction(aiResponse, session, clientId, userRole, rawMessage) {
@@ -186,6 +187,21 @@ exports.ChatService = {
                 });
                 aiResponse.reply = `Mesa #${table.table_number} creada correctamente.`;
                 aiResponse.payload = { table };
+                break;
+            }
+            case 'NOTIFY_WAITERS': {
+                const notifyResult = await (0, notify_1.notifyAllWaiters)();
+                aiResponse.payload = notifyResult;
+                if (notifyResult.total === 0) {
+                    aiResponse.reply = 'No hay meseros activos registrados.';
+                }
+                else if (notifyResult.failed.length === 0) {
+                    aiResponse.reply = `Notificación enviada a todos los meseros (${notifyResult.sent} mensajes).`;
+                }
+                else {
+                    const failedNames = notifyResult.failed.map((f) => f.name).join(', ');
+                    aiResponse.reply = `Notificación enviada a ${notifyResult.sent} mesero(s). Falló con: ${failedNames}.`;
+                }
                 break;
             }
             case 'UPDATE_PLATE':
