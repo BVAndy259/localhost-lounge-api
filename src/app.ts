@@ -1,20 +1,20 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
-import authRouter from './routes/auth.routes';
-import userRouter from './routes/user.routes';
-import waiterRouter from './routes/waiter.routes';
-import plateRouter from './routes/plate.routes';
-import tableRouter from './routes/table.routes';
-import reservationRouter from './routes/reservation.routes';
-import chatRouter from './routes/chat.routes';
-import orderRouter from './routes/order.routes';
-import requestLogger from './middlewares/logger.middleware';
-import errorHandler from './middlewares/error.middleware';
+import { env } from './shared/config/env';
+import authRouter from './modules/auth/auth.routes';
+import userRouter from './modules/users/user.routes';
+import waiterRouter from './modules/waiters/waiter.routes';
+import plateRouter from './modules/plates/plate.routes';
+import tableRouter from './modules/tables/table.routes';
+import reservationRouter from './modules/reservations/reservation.routes';
+import orderRouter from './modules/orders/order.routes';
+import requestLogger from './shared/middlewares/logger.middleware';
+import errorHandler from './shared/middlewares/error.middleware';
 
 const app: Application = express();
 
 const corsOptions = {
-  origin: ['http://localhost:5173', 'https://tu-frontend-vercel.app'],
+  origin: [env.URL_ORIGIN],
   credentials: true,
 };
 
@@ -44,7 +44,6 @@ app.use('/api/waiters', waiterRouter);
 app.use('/api/plates', plateRouter);
 app.use('/api/tables', tableRouter);
 app.use('/api/reservations', reservationRouter);
-app.use('/api/chat', chatRouter);
 app.use('/api/orders', orderRouter);
 
 app.use(errorHandler);
