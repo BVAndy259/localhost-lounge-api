@@ -1,5 +1,5 @@
-import prisma from '../src/config/prisma';
-import { env } from '../src/config/env';
+import prisma from '../src/shared/config/prisma';
+import { env } from '../src/shared/config/env';
 import bcrypt from 'bcryptjs';
 
 async function main() {
