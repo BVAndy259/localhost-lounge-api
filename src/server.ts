@@ -1,6 +1,6 @@
 import app from './app';
-import { env } from './config/env';
-import { logger } from './utils/logger';
+import { env } from './shared/config/env';
+import { logger } from './shared/utils/logger';
 
 const serverUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${env.PORT}`;
 
